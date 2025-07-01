@@ -1,0 +1,54 @@
+1.     Admin (Elson)
+
+-       Login – The user should key in username and password only. The system should identify their user role.
+
+-       Register and delete tutors. Assign tutors to respective levels and subjects.
+
+-       Register and delete the receptionist.
+
+-       View monthly income report based on level and subject.
+
+-       Update own profile.
+
+ Receptionist
+ (ChenYao)
+
+-       Login – The user should key in username and password only. The system should identify their user role. Only three attempts of login are allowed.
+
+-       Register a student and enroll the student in up to 3 subjects. During enrolment, record student information for eg: name, IC/Passport, email, contact number, address, level, subjects, the month of enrolment, etc (you may add other relevant information)
+
+-       Update subject enrollment of a student
+
+-       Accept payment from students and generate receipts.
+
+-       Delete students who have completed their studies.
+
+-       Update own profile.
+
+   Tutor
+ (Yin yin)
+
+-       Login – The user should key in username and password only. The system should identify their user role. Only three attempts of login are allowed.
+
+-       Add class information (e.g. subject name, charges, class schedule, etc)
+
+-       Update and delete class information
+
+-       View the list of students enrolled in his/her subjects
+
+-       Update own profile.
+
+Student
+ (Javion)
+
+-       Login – The user should key in username and password only. The system should identify their user role. Only three attempts of login are allowed.
+
+-       View the schedule of his/her classes
+
+-       Send a request to the receptionist to change the subject enrollment
+
+-       Delete the request (which is still pending) sent to the receptionist to change the subject.
+
+-       View payment status with the total balance that needs to be paid, if any.
+
+-       Update own profile.
