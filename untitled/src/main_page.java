@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.nio.file.Paths;
 
 public class main_page extends JFrame {
     private JPanel main;
@@ -98,7 +99,9 @@ public class main_page extends JFrame {
     }
     
     private User authenticateUser(String username, String password) {
-        try (BufferedReader reader = new BufferedReader(new FileReader("data/users.txt"))) {
+        // Use cross-platform file path
+        String userFilePath = Paths.get("untitled", "data", "users.txt").toString();
+        try (BufferedReader reader = new BufferedReader(new FileReader(userFilePath))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split(",");
