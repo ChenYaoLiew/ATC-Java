@@ -1,6 +1,6 @@
 1.     Admin (Elson)
 
--       Login – The user should key in username and password only. The system should identify their user role.
+-       Login – The user should key in username and password only. The system should identify their user role. ✅
 
 -       Register and delete tutors. Assign tutors to respective levels and subjects.
 
@@ -13,7 +13,7 @@
  Receptionist
  (ChenYao)
 
--       Login – The user should key in username and password only. The system should identify their user role. Only three attempts of login are allowed.
+-       Login – The user should key in username and password only. The system should identify their user role. Only three attempts of login are allowed. ✅
 
 -       Register a student and enroll the student in up to 3 subjects. During enrolment, record student information for eg: name, IC/Passport, email, contact number, address, level, subjects, the month of enrolment, etc (you may add other relevant information)
 
@@ -28,7 +28,7 @@
    Tutor
  (Yin yin)
 
--       Login – The user should key in username and password only. The system should identify their user role. Only three attempts of login are allowed.
+-       Login – The user should key in username and password only. The system should identify their user role. Only three attempts of login are allowed. ✅
 
 -       Add class information (e.g. subject name, charges, class schedule, etc)
 
@@ -41,7 +41,7 @@
 Student
  (Javion)
 
--       Login – The user should key in username and password only. The system should identify their user role. Only three attempts of login are allowed.
+-       Login – The user should key in username and password only. The system should identify their user role. Only three attempts of login are allowed. ✅
 
 -       View the schedule of his/her classes
 
