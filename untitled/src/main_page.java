@@ -12,7 +12,7 @@ public class main_page extends JFrame {
     private JTextField username_field;
     private JPasswordField password_field;
     private JButton loginButton;
-    
+
     // Store login attempts for non-admin users
     private static Map<String, Integer> loginAttempts = new HashMap<>();
     private static final int MAX_LOGIN_ATTEMPTS = 3;
@@ -121,23 +121,28 @@ public class main_page extends JFrame {
     }
     
     private void openDashboard(User user) {
-        // TODO: Implement navigation to different dashboards based on user role
+        // Hide the login window
+        this.setVisible(false);
+        
+        // Open appropriate dashboard based on user role
         switch (user.getRole()) {
             case "Admin":
                 // TODO: Open Admin dashboard
                 System.out.println("Opening Admin dashboard for " + user.getName());
+                // new AdminDashboard(user.getName()).setVisible(true);
                 break;
             case "Receptionist":
-                // TODO: Open Receptionist dashboard
-                System.out.println("Opening Receptionist dashboard for " + user.getName());
+                new receptionist_dashboard(user.getName()).setVisible(true);
                 break;
             case "Tutor":
                 // TODO: Open Tutor dashboard
                 System.out.println("Opening Tutor dashboard for " + user.getName());
+                // new TutorDashboard(user.getName()).setVisible(true);
                 break;
             case "Student":
                 // TODO: Open Student dashboard
                 System.out.println("Opening Student dashboard for " + user.getName());
+                // new StudentDashboard(user.getName()).setVisible(true);
                 break;
             default:
                 JOptionPane.showMessageDialog(this, "Unknown user role: " + user.getRole(), 
