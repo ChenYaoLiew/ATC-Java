@@ -7,6 +7,9 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.nio.file.Paths;
+import java.nio.file.Files;
+import java.io.File;
+import java.io.FileWriter;
 
 public class main_page extends JFrame {
     private JPanel main;
@@ -18,12 +21,18 @@ public class main_page extends JFrame {
     private static Map<String, Integer> loginAttempts = new HashMap<>();
     private static final int MAX_LOGIN_ATTEMPTS = 3;
     
+    // Define base directory for data files - using current directory
+    private static final String DATA_DIR = "data";
+    
     public main_page() {
         setContentPane(main);
         setTitle("Tuition Center Management System - Login");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(400, 200);
         setLocationRelativeTo(null);
+        
+        // Ensure data directory and user file exist
+        ensureDataFilesExist();
         
         // Add action listener to login button
         loginButton.addActionListener(new ActionListener() {
@@ -99,9 +108,11 @@ public class main_page extends JFrame {
     }
     
     private User authenticateUser(String username, String password) {
-        // Use cross-platform file path
-        String userFilePath = Paths.get("untitled", "data", "users.txt").toString();
-        try (BufferedReader reader = new BufferedReader(new FileReader(userFilePath))) {
+        // Get current directory path for file access
+        String currentDir = System.getProperty("user.dir");
+        String filePath = Paths.get(currentDir, DATA_DIR, "users.txt").toString();
+        
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split(",");
@@ -117,7 +128,7 @@ public class main_page extends JFrame {
                 }
             }
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "Error reading user data: " + e.getMessage(), 
+            JOptionPane.showMessageDialog(this, "Error reading user data: " + e.getMessage() + "\nPath: " + filePath, 
                                         "Error", JOptionPane.ERROR_MESSAGE);
         }
         return null;
@@ -150,6 +161,51 @@ public class main_page extends JFrame {
             default:
                 JOptionPane.showMessageDialog(this, "Unknown user role: " + user.getRole(), 
                                             "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    // Method to ensure data directory and user file exist
+    private void ensureDataFilesExist() {
+        try {
+            // Get current directory path
+            String currentDir = System.getProperty("user.dir");
+            
+            // Create data directory if it doesn't exist
+            File dataDir = new File(Paths.get(currentDir, DATA_DIR).toString());
+            if (!dataDir.exists()) {
+                dataDir.mkdir();
+                System.out.println("Created data directory at: " + dataDir.getAbsolutePath());
+            }
+            
+            // Create users.txt if it doesn't exist
+            File usersFile = new File(Paths.get(currentDir, DATA_DIR, "users.txt").toString());
+            if (!usersFile.exists()) {
+                try (FileWriter writer = new FileWriter(usersFile)) {
+                    // Add default users
+                    writer.write("admin,admin123,Admin,Elson\n");
+                    writer.write("receptionist,recep123,Receptionist,ChenYao\n");
+                    writer.write("tutor,tutor123,Tutor,Yin Yin\n");
+                    writer.write("student,student123,Student,Javion\n");
+                    System.out.println("Created users.txt at: " + usersFile.getAbsolutePath());
+                }
+            }
+            
+            // Create students.txt if it doesn't exist
+            File studentsFile = new File(Paths.get(currentDir, DATA_DIR, "students.txt").toString());
+            if (!studentsFile.exists()) {
+                studentsFile.createNewFile();
+                System.out.println("Created students.txt at: " + studentsFile.getAbsolutePath());
+            }
+            
+            // Create payments.txt if it doesn't exist
+            File paymentsFile = new File(Paths.get(currentDir, DATA_DIR, "payments.txt").toString());
+            if (!paymentsFile.exists()) {
+                paymentsFile.createNewFile();
+                System.out.println("Created payments.txt at: " + paymentsFile.getAbsolutePath());
+            }
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this, "Error creating data files: " + e.getMessage(),
+                                        "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
     
