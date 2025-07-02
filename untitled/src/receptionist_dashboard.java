@@ -1,4 +1,5 @@
 import java.io.*;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -45,6 +46,9 @@ public class receptionist_dashboard extends JFrame {
     
     private String currentUser;
     private static int nextStudentId = 1001; // Starting student ID
+    
+    // Define base directory for data files
+    private static final String DATA_DIR = "data";
     
     public receptionist_dashboard(String userName) {
         this.currentUser = userName;
@@ -148,15 +152,18 @@ public class receptionist_dashboard extends JFrame {
         String level = (String) levelCombo.getSelectedItem();
         String subjects = String.join(", ", selectedSubjects);
         String enrollmentDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+        String status = "Active";
         
         // Save to file
-        try (FileWriter writer = new FileWriter("data/students.txt", true)) {
+        String currentDir = System.getProperty("user.dir");
+        try (FileWriter writer = new FileWriter(Paths.get(currentDir, DATA_DIR, "students.txt").toString(), true)) {
+            // Format: studentId,name,icPassport,email,contact,address,level,subjects,date,status
             writer.write(studentId + "," + name + "," + icPassport + "," + email + "," + 
                         contact + "," + address + "," + level + "," + subjects + "," + 
-                        enrollmentDate + ",Active\n");
+                        enrollmentDate + "," + status + "\n");
             
             // Add to table
-            tableModel.addRow(new Object[]{studentId, name, icPassport, email, contact, level, subjects, "Active"});
+            tableModel.addRow(new Object[]{studentId, name, icPassport, email, contact, level, subjects, status});
             
             // Refresh student dropdown
             refreshStudentCombo();
@@ -248,7 +255,8 @@ public class receptionist_dashboard extends JFrame {
             String date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
             
             // Save payment record
-            try (FileWriter writer = new FileWriter("data/payments.txt", true)) {
+            String currentDir = System.getProperty("user.dir");
+            try (FileWriter writer = new FileWriter(Paths.get(currentDir, DATA_DIR, "payments.txt").toString(), true)) {
                 writer.write(studentId + "," + amount + "," + paymentMethod + "," + date + "\n");
                 
                 JOptionPane.showMessageDialog(this, "Payment accepted successfully!", 
@@ -364,8 +372,9 @@ public class receptionist_dashboard extends JFrame {
     }
     
     private void loadStudentData() {
+        String currentDir = System.getProperty("user.dir");
         // Create students.txt if it doesn't exist
-        File file = new File("data/students.txt");
+        File file = new File(Paths.get(currentDir, DATA_DIR, "students.txt").toString());
         if (!file.exists()) {
             try {
                 file.createNewFile();
@@ -376,23 +385,43 @@ public class receptionist_dashboard extends JFrame {
         }
         
         // Load existing student data
-        try (BufferedReader reader = new BufferedReader(new FileReader("data/students.txt"))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(Paths.get(currentDir, DATA_DIR, "students.txt").toString()))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split(",");
-                if (parts.length >= 8) {
+                if (parts.length >= 10) {  // Ensure we have at least 10 parts
+                    // Map the fields correctly based on the actual data structure
+                    // 1001,test123,060623,chenyao,0102154114,test123,Secondary 1,Geography Chemistry Economics,2025-07-01,Active
+                    String studentId = parts[0].trim();
+                    String name = parts[1].trim();
+                    String icPassport = parts[2].trim();
+                    String email = parts[3].trim();
+                    String contact = parts[4].trim();
+                    // parts[5] is address
+                    String level = parts[6].trim();
+                    String subjects = parts[7].trim();
+                    if (parts.length > 8) {
+                        // If subjects contain commas, they might be split across multiple parts
+                        for (int i = 8; i < parts.length - 2; i++) {
+                            subjects += ", " + parts[i].trim();
+                        }
+                    }
+                    // The last two parts should be date and status
+                    String status = parts[parts.length - 1].trim();
+                    
                     tableModel.addRow(new Object[]{
-                        parts[0], parts[1], parts[2], parts[3], parts[4], 
-                        parts[6], parts[7], parts.length > 9 ? parts[9] : "Active"
+                        studentId, name, icPassport, email, contact, level, subjects, status
                     });
                     
                     // Update next student ID
                     try {
-                        int id = Integer.parseInt(parts[0]);
+                        int id = Integer.parseInt(studentId);
                         if (id >= nextStudentId) {
                             nextStudentId = id + 1;
                         }
                     } catch (NumberFormatException ignored) {}
+                } else {
+                    System.err.println("Invalid data format in line: " + line);
                 }
             }
         } catch (IOException e) {
@@ -420,15 +449,17 @@ public class receptionist_dashboard extends JFrame {
     }
     
     private void updateStudentFile() {
+        String currentDir = System.getProperty("user.dir");
         // Simplified file update - writes all current table data back to file
-        try (FileWriter writer = new FileWriter("data/students.txt", false)) {
+        try (FileWriter writer = new FileWriter(Paths.get(currentDir, DATA_DIR, "students.txt").toString(), false)) {
             for (int i = 0; i < tableModel.getRowCount(); i++) {
+                // Format: studentId,name,icPassport,email,contact,address,level,subjects,date,status
                 String line = tableModel.getValueAt(i, 0) + "," +  // ID
                              tableModel.getValueAt(i, 1) + "," +   // Name
                              tableModel.getValueAt(i, 2) + "," +   // IC
                              tableModel.getValueAt(i, 3) + "," +   // Email
                              tableModel.getValueAt(i, 4) + "," +   // Contact
-                             "," +                                  // Address (simplified)
+                             "" + "," +                            // Address (simplified)
                              tableModel.getValueAt(i, 5) + "," +   // Level
                              tableModel.getValueAt(i, 6) + "," +   // Subjects
                              new SimpleDateFormat("yyyy-MM-dd").format(new Date()) + "," + // Date
