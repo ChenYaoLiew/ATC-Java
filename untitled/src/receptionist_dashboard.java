@@ -4,6 +4,9 @@ import java.util.Date;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 public class receptionist_dashboard extends JFrame {
     private JPanel mainPanel;
@@ -94,10 +97,7 @@ public class receptionist_dashboard extends JFrame {
     
     private void setupEventListeners() {
         // Logout button
-        logoutButton.addActionListener(e -> {
-            dispose();
-            new main_page().setVisible(true);
-        });
+        logoutButton.addActionListener(e -> logout());
         
         // Register Student button
         registerStudentButton.addActionListener(e -> registerStudent());
@@ -439,5 +439,27 @@ public class receptionist_dashboard extends JFrame {
             JOptionPane.showMessageDialog(this, "Error updating student file: " + e.getMessage(), 
                                         "Error", JOptionPane.ERROR_MESSAGE);
         }
+    }
+    
+    private void logout() {
+        int confirm = JOptionPane.showConfirmDialog(this, 
+                "Are you sure you want to logout?", 
+                "Confirm Logout", 
+                JOptionPane.YES_NO_OPTION);
+        
+        if (confirm == JOptionPane.YES_OPTION) {
+            dispose();
+            new main_page().setVisible(true);
+        }
+    }
+    
+    // For testing purposes
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                new receptionist_dashboard("Test Receptionist").setVisible(true);
+            }
+        });
     }
 } 
