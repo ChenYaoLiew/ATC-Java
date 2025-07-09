@@ -64,7 +64,8 @@ public class main_page extends JFrame {
             return;
         }
         
-        User user = authenticateUser(username, password);
+        // Use admin_dashboard's authentication method
+        User user = admin_dashboard.authenticateUser(username, password);
         
         if (user != null) {
             // Reset login attempts on successful login
@@ -74,7 +75,7 @@ public class main_page extends JFrame {
                 "Login successful! Welcome " + user.getName() + " (" + user.getRole() + ")", 
                 "Success", JOptionPane.INFORMATION_MESSAGE);
             
-            // TODO: Navigate to appropriate dashboard based on role
+            // Navigate to appropriate dashboard based on role
             openDashboard(user);
             
         } else {
@@ -107,48 +108,19 @@ public class main_page extends JFrame {
         return loginAttempts.getOrDefault(username, 0) >= MAX_LOGIN_ATTEMPTS;
     }
     
-    private User authenticateUser(String username, String password) {
-        // Get current directory path for file access
-        String currentDir = System.getProperty("user.dir");
-        String filePath = Paths.get(currentDir, DATA_DIR, "users.txt").toString();
-        
-        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split(",");
-                if (parts.length >= 4) {
-                    String fileUsername = parts[0].trim();
-                    String filePassword = parts[1].trim();
-                    String role = parts[2].trim();
-                    String name = parts[3].trim();
-                    
-                    if (fileUsername.equals(username) && filePassword.equals(password)) {
-                        return new User(username, role, name);
-                    }
-                }
-            }
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "Error reading user data: " + e.getMessage() + "\nPath: " + filePath, 
-                                        "Error", JOptionPane.ERROR_MESSAGE);
-        }
-        return null;
-    }
-    
     private void openDashboard(User user) {
         // Hide the login window
         this.setVisible(false);
         
         // Open appropriate dashboard based on user role
         switch (user.getRole()) {
-            case "Admin":
-                // TODO: Open Admin dashboard
-                System.out.println("Opening Admin dashboard for " + user.getName());
-                // new AdminDashboard(user.getName()).setVisible(true);
+            case "admin":
+                new admin_dashboard(user.getName()).setVisible(true);
                 break;
-            case "Receptionist":
+            case "receptionist":
                 new receptionist_dashboard(user.getName()).setVisible(true);
                 break;
-            case "Tutor":
+            case "tutor":
                 // TODO: Open Tutor dashboard
                 System.out.println("Opening Tutor dashboard for " + user.getName());
                 // new TutorDashboard(user.getName()).setVisible(true);
@@ -214,22 +186,5 @@ public class main_page extends JFrame {
                 new main_page().setVisible(true);
             }
         });
-    }
-    
-    // Inner class to represent a User
-    private static class User {
-        private String username;
-        private String role;
-        private String name;
-        
-        public User(String username, String role, String name) {
-            this.username = username;
-            this.role = role;
-            this.name = name;
-        }
-        
-        public String getUsername() { return username; }
-        public String getRole() { return role; }
-        public String getName() { return name; }
     }
 }
