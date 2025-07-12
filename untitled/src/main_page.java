@@ -125,7 +125,7 @@ public class main_page extends JFrame {
                 System.out.println("Opening Tutor dashboard for " + user.getName());
                 // new TutorDashboard(user.getName()).setVisible(true);
                 break;
-            case "Student":
+            case "student":
                 new student_dashboard(user.getName()).setVisible(true);
                 break;
             default:
