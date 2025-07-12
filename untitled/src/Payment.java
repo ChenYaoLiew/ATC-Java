@@ -9,7 +9,7 @@ public class Payment {
     private String month; // Month for which payment is made
     private String receiptNumber;
 
-    public Payment(String studentUsername, String subject, String level, double amount, 
+    public Payment(String studentUsername, String subject, String level, double amount,
                   LocalDate paymentDate, String month, String receiptNumber) {
         this.studentUsername = studentUsername;
         this.subject = subject;
@@ -51,11 +51,11 @@ public class Payment {
 
     @Override
     public String toString() {
-        return "Receipt #" + receiptNumber + 
-               "\nStudent: " + studentUsername + 
+        return "Receipt #" + receiptNumber +
+               "\nStudent: " + studentUsername +
                "\nSubject: " + subject + " (" + level + ")" +
                "\nAmount: $" + amount +
                "\nPayment Date: " + paymentDate +
                "\nFor Month: " + month;
     }
-} 
+}

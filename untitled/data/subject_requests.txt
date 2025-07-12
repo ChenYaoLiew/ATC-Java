@@ -1,0 +1,8 @@
+REQ001,S001,Add,CLS004,,Want to improve math skills,2024-01-20,Approved,2024-01-21,Request approved - Math Secondary 4 added
+REQ002,S001,Add,CLS009,,Need better English grades,2024-01-22,Approved,2024-01-23,Request approved - English Secondary 4 added
+REQ003,S002,Add,CLS003,,Struggling with math,2024-02-01,Approved,2024-02-02,Request approved - Math Secondary 3 added
+REQ004,S002,Add,CLS008,,Want to improve English,2024-02-03,Approved,2024-02-04,Request approved - English Secondary 3 added
+REQ005,S001,Add,CLS019,,Interested in science,2024-02-10,Pending,,Under review
+REQ006,S002,Drop,CLS008,CLS008,Too many subjects,2024-02-15,Rejected,2024-02-16,Cannot drop - minimum subjects required
+REQ007,S001,Change,CLS014,CLS009,Schedule conflict,2024-02-20,Pending,,Checking schedule availability
+REQ008,S002,Add,CLS013,,Want to learn Malay,2024-02-25,Approved,2024-02-26,Request approved - Malay Secondary 3 added
