@@ -126,7 +126,7 @@ public class main_page extends JFrame {
                 // new TutorDashboard(user.getName()).setVisible(true);
                 break;
             case "student":
-                new student_dashboard(user.getName()).setVisible(true);
+                new student_dashboard(user.getUsername()).setVisible(true);
                 break;
             default:
                 JOptionPane.showMessageDialog(this, "Unknown user role: " + user.getRole(), 
