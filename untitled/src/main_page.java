@@ -151,11 +151,11 @@ public class main_page extends JFrame {
             File usersFile = new File(Paths.get(currentDir, DATA_DIR, "users.txt").toString());
             if (!usersFile.exists()) {
                 try (FileWriter writer = new FileWriter(usersFile)) {
-                    // Add default users
-                    writer.write("admin,admin123,Admin,Elson\n");
-                    writer.write("receptionist,recep123,Receptionist,ChenYao\n");
-                    writer.write("tutor,tutor123,Tutor,Yin Yin\n");
-                    writer.write("student,student123,Student,Javion\n");
+                    // Add default users with format: username,password,role,name,student_id
+                    writer.write("admin,admin123,admin,Elson,\n");
+                    writer.write("receptionist,recep123,receptionist,ChenYao,\n");
+                    writer.write("tutor,tutor123,tutor,Yin Yin,\n");
+                    writer.write("student,student123,student,Javion,\n");
                     System.out.println("Created users.txt at: " + usersFile.getAbsolutePath());
                 }
             }

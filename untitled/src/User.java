@@ -5,6 +5,7 @@ public abstract class User {
     private String email;
     private String contactNumber;
     private String role; // "admin", "tutor", "receptionist", "student"
+    private String studentId; // Link to student record for student users
 
     public User(String username, String password, String name, String email, String contactNumber, String role) {
         this.username = username;
@@ -13,6 +14,17 @@ public abstract class User {
         this.email = email;
         this.contactNumber = contactNumber;
         this.role = role;
+        this.studentId = null; // Default null for non-student users
+    }
+
+    public User(String username, String password, String name, String email, String contactNumber, String role, String studentId) {
+        this.username = username;
+        this.password = password;
+        this.name = name;
+        this.email = email;
+        this.contactNumber = contactNumber;
+        this.role = role;
+        this.studentId = studentId;
     }
 
     // Getters and setters
@@ -58,6 +70,14 @@ public abstract class User {
 
     public String getRole() {
         return role;
+    }
+
+    public String getStudentId() {
+        return studentId;
+    }
+
+    public void setStudentId(String studentId) {
+        this.studentId = studentId;
     }
 
     // Method to update profile

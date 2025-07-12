@@ -69,8 +69,7 @@ public class receptionist_dashboard extends JFrame {
     
     private void initializeComponents() {
         // Initialize Level ComboBox
-        String[] levels = {"Primary 1", "Primary 2", "Primary 3", "Primary 4", "Primary 5", "Primary 6",
-                          "Secondary 1", "Secondary 2", "Secondary 3", "Secondary 4", "Secondary 5"};
+        String[] levels = {"Secondary 1", "Secondary 2", "Secondary 3", "Secondary 4", "Secondary 5"};
         levelCombo.setModel(new DefaultComboBoxModel<>(levels));
         
         // Initialize Subjects List (max 3 selections)
@@ -162,6 +161,9 @@ public class receptionist_dashboard extends JFrame {
                         contact + "," + address + "," + level + "," + subjects + "," + 
                         enrollmentDate + "," + status + "\n");
             
+            // Create user account for the student
+            createStudentUserAccount(name, studentId, email);
+            
             // Add to table
             tableModel.addRow(new Object[]{studentId, name, icPassport, email, contact, level, subjects, status});
             
@@ -169,7 +171,8 @@ public class receptionist_dashboard extends JFrame {
             refreshStudentCombo();
             
             JOptionPane.showMessageDialog(this, 
-                "Student registered successfully!\nStudent ID: " + studentId, 
+                "Student registered successfully!\nStudent ID: " + studentId + 
+                "\nDefault login: student" + studentId + " / password123", 
                 "Success", JOptionPane.INFORMATION_MESSAGE);
             
             // Clear form
@@ -354,6 +357,22 @@ public class receptionist_dashboard extends JFrame {
         }
         
         paymentStudentCombo.setModel(model);
+    }
+    
+    // Method to create user account for student
+    private void createStudentUserAccount(String studentName, String studentId, String email) {
+        String currentDir = System.getProperty("user.dir");
+        try (FileWriter writer = new FileWriter(Paths.get(currentDir, DATA_DIR, "users.txt").toString(), true)) {
+            // Format: username,password,role,name,student_id
+            String username = "student" + studentId;
+            String password = "password123"; // Default password
+            String role = "student";
+            
+            writer.write(username + "," + password + "," + role + "," + studentName + "," + studentId + "\n");
+            
+        } catch (IOException e) {
+            System.err.println("Error creating user account for student: " + e.getMessage());
+        }
     }
     
     private void updateProfile() {
