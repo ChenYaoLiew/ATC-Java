@@ -7,6 +7,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 
 public class admin_dashboard extends JFrame {
     private JPanel mainPanel;
@@ -31,13 +34,9 @@ public class admin_dashboard extends JFrame {
     private static List<Subject> subjects = new ArrayList<>();
     private static List<Payment> payments = new ArrayList<>();
     
-    // Add default admin for testing
+    // Load users from file on class initialization
     static {
-        // Create admin using a concrete class that extends User
-        // Since User is abstract, we need to use a concrete implementation
-        // Let's use a simple anonymous inner class
-        User defaultAdmin = new User("admin", "admin123", "Default Admin", "admin@tuition.com", "123456789", "admin") {};
-        users.add(defaultAdmin);
+        loadUsersFromFile();
     }
 
     public admin_dashboard(String name) {
@@ -72,6 +71,58 @@ public class admin_dashboard extends JFrame {
         setupActionListeners();
     }
     
+    // Method to load users from file
+    private static void loadUsersFromFile() {
+        String currentDir = System.getProperty("user.dir");
+        String userFilePath = currentDir + "/data/users.txt";
+        
+        try (BufferedReader reader = new BufferedReader(new FileReader(userFilePath))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length >= 4) {
+                    String username = parts[0].trim();
+                    String password = parts[1].trim();
+                    String role = parts[2].trim();
+                    String name = parts[3].trim();
+                    String studentId = parts.length > 4 ? parts[4].trim() : null;
+                    
+                    // Create appropriate user object based on role
+                    User user = null;
+                    switch (role.toLowerCase()) {
+                        case "admin":
+                            user = new User(username, password, name, "", "", role, studentId) {};
+                            break;
+                        case "receptionist":
+                            user = new Receptionist(username, password, name, "", "", "");
+                            if (studentId != null && !studentId.isEmpty()) {
+                                user.setStudentId(studentId);
+                            }
+                            break;
+                        case "tutor":
+                            user = new Tutor(username, password, name, "", "");
+                            if (studentId != null && !studentId.isEmpty()) {
+                                user.setStudentId(studentId);
+                            }
+                            break;
+                        case "student":
+                            user = new User(username, password, name, "", "", role, studentId) {};
+                            break;
+                    }
+                    
+                    if (user != null) {
+                        users.add(user);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error loading users from file: " + e.getMessage());
+            // Create default admin if file doesn't exist or can't be read
+            User defaultAdmin = new User("admin", "admin123", "Elson", "admin@tuition.com", "123456789", "admin") {};
+            users.add(defaultAdmin);
+        }
+    }
+
     // User authentication method
     public static User authenticateUser(String username, String password) {
         for (User user : users) {
