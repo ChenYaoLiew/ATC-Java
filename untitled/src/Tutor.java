@@ -56,8 +56,8 @@ public class Tutor extends User {
 
     @Override
     public String toString() {
-        return "Tutor: " + getName() + 
+        return "Tutor: " + getName() +
                "\nSubjects: " + String.join(", ", subjects) +
                "\nLevels: " + String.join(", ", levels);
     }
-} 
+}

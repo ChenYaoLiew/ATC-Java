@@ -18,4 +18,4 @@ public class Receptionist extends User {
     public String toString() {
         return "Receptionist: " + getName() + " (ID: " + employeeId + ")";
     }
-} 
+}
