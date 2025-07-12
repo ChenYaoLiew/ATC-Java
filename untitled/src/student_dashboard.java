@@ -41,16 +41,16 @@ public class student_dashboard extends JFrame {
     public student_dashboard(String userName) {
         this.currentUser = userName;
         
+        // Create GUI components manually
+        createGUI();
+        
         // Create menu bar
         createMenuBar();
         
-        setContentPane(mainPanel);
         setTitle("Student Dashboard - " + userName);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(900, 700);
         setLocationRelativeTo(null);
-
-        welcomeLabel.setText("Welcome, " + userName + " (Student)");
 
         initializeComponents();
         setupEventListeners();
@@ -58,6 +58,230 @@ public class student_dashboard extends JFrame {
         loadRequests();
         loadPayments();
         loadProfile();
+    }
+
+    private void createGUI() {
+        // Main panel
+        mainPanel = new JPanel(new BorderLayout(15, 15));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        mainPanel.setBackground(Color.WHITE);
+
+        // Header panel
+        JPanel headerPanel = new JPanel(new BorderLayout(10, 0));
+        headerPanel.setBackground(Color.BLACK);
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        headerPanel.setPreferredSize(new Dimension(0, 60));
+
+        welcomeLabel = new JLabel("Welcome, " + currentUser + " (Student)");
+        welcomeLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        welcomeLabel.setForeground(Color.WHITE);
+        welcomeLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
+        logoutButton = new JButton("Logout");
+        logoutButton.setFont(new Font("Arial", Font.BOLD, 12));
+        logoutButton.setBackground(Color.RED);
+        logoutButton.setForeground(Color.BLACK);
+        logoutButton.setPreferredSize(new Dimension(100, 35));
+
+        headerPanel.add(welcomeLabel, BorderLayout.CENTER);
+        headerPanel.add(logoutButton, BorderLayout.EAST);
+
+        // Tabbed pane
+        tabbedPane = new JTabbedPane();
+        tabbedPane.setFont(new Font("Arial", Font.PLAIN, 14));
+
+        // Create tabs
+        createScheduleTab();
+        createRequestTab();
+        createPaymentTab();
+        createProfileTab();
+
+        mainPanel.add(headerPanel, BorderLayout.NORTH);
+        mainPanel.add(tabbedPane, BorderLayout.CENTER);
+
+        setContentPane(mainPanel);
+    }
+
+    private void createScheduleTab() {
+        JPanel schedulePanel = new JPanel(new BorderLayout(15, 15));
+        schedulePanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        schedulePanel.setBackground(Color.WHITE);
+
+        JLabel headerLabel = new JLabel("📚 Weekly Class Schedule");
+        headerLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        headerLabel.setForeground(Color.BLACK);
+
+        scheduleTable = new JTable();
+        scheduleTable.setFont(new Font("Arial", Font.PLAIN, 12));
+        scheduleTable.setRowHeight(25);
+        scheduleTable.setGridColor(new Color(0x808080));
+        scheduleTable.setSelectionBackground(new Color(0x4CAF50));
+
+        JScrollPane scrollPane = new JScrollPane(scheduleTable);
+        scrollPane.setPreferredSize(new Dimension(0, 400));
+
+        schedulePanel.add(headerLabel, BorderLayout.NORTH);
+        schedulePanel.add(scrollPane, BorderLayout.CENTER);
+
+        tabbedPane.addTab("📅 My Schedule", schedulePanel);
+    }
+
+    private void createRequestTab() {
+        JPanel requestPanel = new JPanel(new BorderLayout(15, 15));
+        requestPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        requestPanel.setBackground(Color.WHITE);
+
+        // Top panel for new request
+        JPanel topPanel = new JPanel(new BorderLayout(10, 10));
+        
+        JLabel headerLabel = new JLabel("✏️ Submit New Subject Change Request");
+        headerLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        headerLabel.setForeground(Color.BLACK);
+
+        JLabel instructionLabel = new JLabel("Describe your subject change request (e.g., add/drop subjects, change class time):");
+        instructionLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+
+        requestTextArea = new JTextArea();
+        requestTextArea.setFont(new Font("Arial", Font.PLAIN, 12));
+        requestTextArea.setLineWrap(true);
+        requestTextArea.setWrapStyleWord(true);
+        requestTextArea.setRows(4);
+        JScrollPane textScrollPane = new JScrollPane(requestTextArea);
+        textScrollPane.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+
+        // Button panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        
+        sendRequestButton = new JButton("📤 Send Request");
+        sendRequestButton.setFont(new Font("Arial", Font.BOLD, 12));
+        sendRequestButton.setBackground(new Color(0x4CAF50));
+        sendRequestButton.setForeground(Color.BLACK);
+        sendRequestButton.setPreferredSize(new Dimension(150, 35));
+
+        deleteRequestButton = new JButton("🗑️ Delete Pending");
+        deleteRequestButton.setFont(new Font("Arial", Font.BOLD, 12));
+        deleteRequestButton.setBackground(new Color(0xFF9800));
+        deleteRequestButton.setForeground(Color.BLACK);
+        deleteRequestButton.setPreferredSize(new Dimension(180, 35));
+
+        buttonPanel.add(sendRequestButton);
+        buttonPanel.add(deleteRequestButton);
+
+        topPanel.add(headerLabel, BorderLayout.NORTH);
+        topPanel.add(instructionLabel, BorderLayout.CENTER);
+        topPanel.add(textScrollPane, BorderLayout.SOUTH);
+
+        // Bottom panel for request history
+        JPanel bottomPanel = new JPanel(new BorderLayout(10, 10));
+        
+        JLabel historyLabel = new JLabel("📋 My Request History");
+        historyLabel.setFont(new Font("Arial", Font.BOLD, 14));
+
+        requestTable = new JTable();
+        requestTable.setFont(new Font("Arial", Font.PLAIN, 11));
+        requestTable.setRowHeight(25);
+        requestTable.setGridColor(new Color(0x808080));
+        requestTable.setSelectionBackground(new Color(0x4CAF50));
+
+        JScrollPane tableScrollPane = new JScrollPane(requestTable);
+        tableScrollPane.setPreferredSize(new Dimension(0, 200));
+
+        bottomPanel.add(historyLabel, BorderLayout.NORTH);
+        bottomPanel.add(tableScrollPane, BorderLayout.CENTER);
+
+        requestPanel.add(topPanel, BorderLayout.NORTH);
+        requestPanel.add(buttonPanel, BorderLayout.CENTER);
+        requestPanel.add(bottomPanel, BorderLayout.SOUTH);
+
+        tabbedPane.addTab("📝 Subject Requests", requestPanel);
+    }
+
+    private void createPaymentTab() {
+        JPanel paymentPanel = new JPanel(new BorderLayout(15, 15));
+        paymentPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        paymentPanel.setBackground(Color.WHITE);
+
+        JLabel headerLabel = new JLabel("💳 Payment Status & History");
+        headerLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        headerLabel.setForeground(Color.BLACK);
+
+        paymentStatusLabel = new JLabel("💰 Payment Status and Balance");
+        paymentStatusLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        paymentStatusLabel.setForeground(new Color(0xFF9800));
+
+        paymentTable = new JTable();
+        paymentTable.setFont(new Font("Arial", Font.PLAIN, 12));
+        paymentTable.setRowHeight(25);
+        paymentTable.setGridColor(new Color(0x808080));
+        paymentTable.setSelectionBackground(new Color(0x4CAF50));
+
+        JScrollPane scrollPane = new JScrollPane(paymentTable);
+        scrollPane.setPreferredSize(new Dimension(0, 400));
+
+        paymentPanel.add(headerLabel, BorderLayout.NORTH);
+        paymentPanel.add(paymentStatusLabel, BorderLayout.CENTER);
+        paymentPanel.add(scrollPane, BorderLayout.SOUTH);
+
+        tabbedPane.addTab("💰 Payments", paymentPanel);
+    }
+
+    private void createProfileTab() {
+        JPanel profilePanel = new JPanel(new BorderLayout(15, 15));
+        profilePanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        profilePanel.setBackground(Color.WHITE);
+
+        JLabel headerLabel = new JLabel("👤 My Profile Information");
+        headerLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        headerLabel.setForeground(Color.BLACK);
+
+        // Form panel
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.anchor = GridBagConstraints.WEST;
+
+        JLabel nameLabel = new JLabel("👤 Name:");
+        nameLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        nameLabel.setPreferredSize(new Dimension(100, 30));
+
+        profileNameField = new JTextField();
+        profileNameField.setFont(new Font("Arial", Font.PLAIN, 12));
+        profileNameField.setPreferredSize(new Dimension(300, 30));
+
+        JLabel contactLabel = new JLabel("📞 Contact:");
+        contactLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        contactLabel.setPreferredSize(new Dimension(100, 30));
+
+        profileContactField = new JTextField();
+        profileContactField.setFont(new Font("Arial", Font.PLAIN, 12));
+        profileContactField.setPreferredSize(new Dimension(300, 30));
+
+        updateProfileButton = new JButton("💾 Update Profile");
+        updateProfileButton.setFont(new Font("Arial", Font.BOLD, 12));
+        updateProfileButton.setBackground(new Color(0x4CAF50));
+        updateProfileButton.setForeground(Color.BLACK);
+        updateProfileButton.setPreferredSize(new Dimension(150, 35));
+
+        // Add components to form
+        gbc.gridx = 0; gbc.gridy = 0;
+        formPanel.add(nameLabel, gbc);
+        gbc.gridx = 1;
+        formPanel.add(profileNameField, gbc);
+        
+        gbc.gridx = 0; gbc.gridy = 1;
+        formPanel.add(contactLabel, gbc);
+        gbc.gridx = 1;
+        formPanel.add(profileContactField, gbc);
+
+        // Button panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        buttonPanel.add(updateProfileButton);
+
+        profilePanel.add(headerLabel, BorderLayout.NORTH);
+        profilePanel.add(formPanel, BorderLayout.CENTER);
+        profilePanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        tabbedPane.addTab("👤 Profile", profilePanel);
     }
 
     private void createMenuBar() {
