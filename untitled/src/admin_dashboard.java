@@ -80,12 +80,12 @@ public class admin_dashboard extends JFrame {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split(",");
-                if (parts.length >= 4) {
-                    String username = parts[0].trim();
-                    String password = parts[1].trim();
-                    String role = parts[2].trim();
-                    String name = parts[3].trim();
-                    String studentId = parts.length > 4 ? parts[4].trim() : null;
+                if (parts.length >= 5) {
+                    String studentId = parts[0].trim(); // ID field
+                    String username = parts[1].trim();
+                    String password = parts[2].trim();
+                    String role = parts[3].trim();
+                    String name = parts[4].trim();
 
                     // Create appropriate user object based on role
                     User user = null;
