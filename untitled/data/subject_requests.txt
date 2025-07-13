@@ -1,0 +1,3 @@
+R001,1001,Add,C003,,Want to take Science,2024-01-25,Pending,,
+R002,1002,Drop,C001,,Too difficult,2024-01-26,Approved,2024-01-27,Request approved
+R003,1001,Change,C002,C001,Prefer English over Math,2024-01-28,Rejected,2024-01-29,Math is mandatory

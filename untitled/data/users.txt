@@ -1,5 +1,8 @@
-admin,admin123,admin,Elson,
-receptionist,recep123,receptionist,ChenYao,
-tutor,tutor123,tutor,Yin Yin,
-student,student123,student,Javion,
-student1001,password123,student,test123,1001 
+A001,admin,admin123,admin,Elson
+A002,admin2,admin456,admin,Sarah Johnson
+R001,receptionist,recep123,receptionist,ChenYao
+R002,receptionist2,recep456,receptionist,Maria Garcia
+T001,tutor,tutor123,tutor,Yin Yin
+T002,tutor2,tutor456,tutor,David Smith
+S001,student,student123,student,Javion
+S002,student2,student456,student,Emily Chen

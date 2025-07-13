@@ -1,1 +1,2 @@
-1001,test123,060623,chenyao,0102154114,test123, 123,Secondary 1,Geography, Chemistry, Economics,2025-07-01,Active
+1001,John Doe,123456789012,john@email.com,0123456789,123 Main St,Secondary 1,2024-01-15,Active
+1002,Jane Smith,987654321098,jane@email.com,0198765432,456 Oak Ave,Secondary 2,2024-01-20,Active
