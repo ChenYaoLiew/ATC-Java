@@ -1,12 +1,20 @@
-SUB001,Mathematics,Mathematics,Basic and advanced mathematics,Active
-SUB002,English,Language,English language and literature,Active
-SUB003,Science,Science,General science for secondary students,Active
-SUB004,Physics,Science,Physics for upper secondary,Active
-SUB005,Chemistry,Science,Chemistry for upper secondary,Active
-SUB006,Biology,Science,Biology for upper secondary,Active
-SUB007,Chinese,Language,Mandarin Chinese language,Active
-SUB008,Malay,Language,Bahasa Malaysia,Active
-SUB009,History,Humanities,Malaysian and world history,Active
-SUB010,Geography,Humanities,Physical and human geography,Active
-SUB011,Economics,Social Science,Basic economics principles,Active
-SUB012,Accounting,Business,Basic accounting principles,Active
+SUB001,Math,Secondary 1
+SUB002,Math,Secondary 2
+SUB003,Math,Secondary 3
+SUB004,Math,Secondary 4
+SUB005,Math,Secondary 5
+SUB006,English,Secondary 1
+SUB007,English,Secondary 2
+SUB008,English,Secondary 3
+SUB009,English,Secondary 4
+SUB010,English,Secondary 5
+SUB011,Malay,Secondary 1
+SUB012,Malay,Secondary 2
+SUB013,Malay,Secondary 3
+SUB014,Malay,Secondary 4
+SUB015,Malay,Secondary 5
+SUB016,Science,Secondary 1
+SUB017,Science,Secondary 2
+SUB018,Science,Secondary 3
+SUB019,Science,Secondary 4
+SUB020,Science,Secondary 5
