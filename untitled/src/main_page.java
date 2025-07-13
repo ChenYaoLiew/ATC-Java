@@ -140,24 +140,62 @@ public class main_page extends JFrame {
     }
     
     private Tutor createTutorFromUser(User user) {
-        // If the user is already a Tutor object (from admin_dashboard.authenticateUser), 
-        // just cast it to Tutor
-        if (user instanceof Tutor) {
-            Tutor tutor = (Tutor) user;
-            // Load additional tutor-specific data from files if available
-            loadTutorData(tutor);
-            return tutor;
-        } else {
-            // Create a new Tutor object from the User object (fallback)
-            Tutor tutor = new Tutor(user.getUsername(), "", user.getName(), 
-                                   user.getEmail() != null ? user.getEmail() : "", 
-                                   user.getContactNumber() != null ? user.getContactNumber() : "");
-            
-            // Load tutor-specific data from files if available
-            loadTutorData(tutor);
-            
-            return tutor;
+        try {
+            // First get the tutor ID from users.txt based on login username
+            String tutorId = "";
+            String tutorName = "";
+            File usersFile = new File(DATA_DIR + "/users.txt");
+            if (usersFile.exists()) {
+                BufferedReader reader = new BufferedReader(new FileReader(usersFile));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    String[] parts = line.split(",");
+                    // Match the login username (parts[1]) with user's username
+                    if (parts.length >= 5 && parts[1].equals(user.getUsername())) {
+                        tutorId = parts[0].trim();    // Get ID (e.g., T001)
+                        tutorName = parts[4].trim();  // Get Name (e.g., Yin Yin)
+                        break;
+                    }
+                }
+                reader.close();
+            }
+
+            // Now read from tutors.txt to get full tutor details using the tutor ID
+            File tutorsFile = new File(DATA_DIR + "/tutors.txt");
+            if (tutorsFile.exists() && !tutorId.isEmpty()) {
+                BufferedReader reader = new BufferedReader(new FileReader(tutorsFile));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    String[] parts = line.split(",");
+                    if (parts.length >= 6 && parts[0].trim().equals(tutorId)) {
+                        // Create tutor with full details from tutors.txt
+                        Tutor tutor = new Tutor(
+                            tutorId,  // ID from users.txt
+                            user.getPassword(),
+                            tutorName,  // Name from users.txt
+                            parts[3].trim(),  // email
+                            parts[4].trim()   // contact
+                        );
+                        // Load additional tutor-specific data
+                        loadTutorData(tutor);
+                        reader.close();
+                        return tutor;
+                    }
+                }
+                reader.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+
+        // Fallback to basic user info if tutor record not found
+        return new Tutor(
+            user.getUsername(),
+            user.getPassword(),
+            user.getName(),
+            user.getEmail() != null ? user.getEmail() : "",
+            user.getContactNumber() != null ? user.getContactNumber() : ""
+        );
     }
     
     private void loadTutorData(Tutor tutor) {

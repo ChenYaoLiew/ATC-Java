@@ -15,11 +15,12 @@ public class tutor_dashboard extends JFrame {
     
     // Profile Tab
     private JPanel profilePanel;
+    private JTextField tutorIdField;
     private JTextField nameField;
+    private JTextField icPassportField;
     private JTextField emailField;
     private JTextField contactField;
-    private JList<String> subjectsList;
-    private JList<String> levelsList;
+    private JTextField addressField;
     private JButton updateProfileButton;
     
     // Classes Tab
@@ -38,26 +39,6 @@ public class tutor_dashboard extends JFrame {
     private DefaultTableModel studentsTableModel;
     private static final String DATA_DIR = "data";
 
-    public static void main(String[] args) {
-        // Create a test tutor for demonstration
-        Tutor testTutor = new Tutor("testTutor", "password", "Test Tutor", "test@email.com", "123456789");
-        testTutor.addSubject("Mathematics");
-        testTutor.addSubject("Physics");
-        testTutor.addLevel("Form 1");
-        testTutor.addLevel("Form 2");
-
-        // Run the application
-        SwingUtilities.invokeLater(() -> {
-            try {
-                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            tutor_dashboard frame = new tutor_dashboard(testTutor);
-            frame.setVisible(true);
-        });
-    }
-
     public tutor_dashboard(Tutor tutor) {
         this.currentTutor = tutor;
         initializeGUI();
@@ -70,20 +51,50 @@ public class tutor_dashboard extends JFrame {
         setSize(1200, 800);
         setLocationRelativeTo(null);
 
-        // Initialize the UI components
-        setupUI();
+        // Main panel with modern background
+        contentPane = new JPanel(new BorderLayout(15, 15));
+        contentPane.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        contentPane.setBackground(new Color(0xF8F9FA));
+        contentPane.setOpaque(true);
 
-        // Set content pane
+        // Modern header
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(new Color(0x343A40));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(25, 30, 25, 30));
+        headerPanel.setOpaque(true);
+
+        welcomeLabel = new JLabel("Welcome, " + currentTutor.getName() + " (Tutor)", SwingConstants.CENTER);
+        welcomeLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        welcomeLabel.setForeground(Color.WHITE);
+
+        logoutButton = new JButton("Logout");
+        logoutButton.setBackground(new Color(220, 53, 69));
+        logoutButton.setForeground(Color.WHITE);
+        logoutButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        logoutButton.setBorder(BorderFactory.createEmptyBorder(12, 24, 12, 24));
+        logoutButton.setFocusPainted(false);
+        logoutButton.setOpaque(true);
+        logoutButton.setBorderPainted(false);
+        logoutButton.addActionListener(e -> {
+            dispose();
+            SwingUtilities.invokeLater(() -> new main_page().setVisible(true));
+        });
+
+        headerPanel.add(welcomeLabel, BorderLayout.CENTER);
+        headerPanel.add(logoutButton, BorderLayout.EAST);
+
+        // Modern tabbed pane
+        tabbedPane = new JTabbedPane();
+        tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        tabbedPane.setBackground(new Color(0xF8F9FA));
+        tabbedPane.addTab("👤 Profile", createProfilePanel());
+        tabbedPane.addTab("📚 Classes", createClassesPanel());
+        tabbedPane.addTab("👥 Students", createStudentsPanel());
+
+        contentPane.add(headerPanel, BorderLayout.NORTH);
+        contentPane.add(tabbedPane, BorderLayout.CENTER);
+
         setContentPane(contentPane);
-
-        // Set welcome message
-        welcomeLabel.setText("Welcome, " + currentTutor.getName() + " (Tutor)");
-
-        // Initialize tables
-        initializeTables();
-
-        // Add action listeners
-        addActionListeners();
 
         // Set modern look and feel
         try {
@@ -94,167 +105,81 @@ public class tutor_dashboard extends JFrame {
         }
     }
 
-    private void setupUI() {
-        contentPane = new JPanel();
-        contentPane.setLayout(new BorderLayout());
-        contentPane.setBackground(Color.WHITE);
-        
-        // Create header panel
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBackground(Color.BLACK);
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        
-        welcomeLabel = new JLabel("Welcome");
-        welcomeLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        welcomeLabel.setForeground(Color.WHITE);
-        welcomeLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        
-        logoutButton = new JButton("Logout");
-        logoutButton.setBackground(new Color(255, 0, 0));
-        logoutButton.setForeground(Color.BLACK);
-        logoutButton.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        logoutButton.setPreferredSize(new Dimension(100, 35));
-        
-        headerPanel.add(welcomeLabel, BorderLayout.CENTER);
-        headerPanel.add(logoutButton, BorderLayout.EAST);
-        
-        // Create tabbed pane
-        tabbedPane = new JTabbedPane();
-        tabbedPane.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        
-        // Profile tab
-        profilePanel = new JPanel(new GridBagLayout());
-        profilePanel.setBackground(Color.WHITE);
-        setupProfilePanel();
-        tabbedPane.addTab("👤 Profile", profilePanel);
-        
-        // Classes tab
-        classesPanel = new JPanel(new BorderLayout());
-        classesPanel.setBackground(Color.WHITE);
-        setupClassesPanel();
-        tabbedPane.addTab("📚 Classes", classesPanel);
-        
-        // Students tab
-        studentsPanel = new JPanel(new BorderLayout());
-        studentsPanel.setBackground(Color.WHITE);
-        setupStudentsPanel();
-        tabbedPane.addTab("👥 Students", studentsPanel);
-        
-        // Add components to content pane
-        contentPane.add(headerPanel, BorderLayout.NORTH);
-        contentPane.add(tabbedPane, BorderLayout.CENTER);
-    }
+    private JPanel createProfilePanel() {
+        JPanel panel = new JPanel(new BorderLayout(15, 15));
+        panel.setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
+        panel.setBackground(new Color(0xF8F9FA));
+        panel.setOpaque(true);
 
-    private void setupProfilePanel() {
+        JLabel titleLabel = new JLabel("👤 My Profile Information");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        titleLabel.setForeground(new Color(0x343A40));
+
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        formPanel.setBackground(new Color(0xF8F9FA));
+        formPanel.setOpaque(true);
         GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(15, 15, 15, 15);
+        gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(5, 5, 5, 5);
-        
-        // Name field
+
+        // Tutor ID field
         gbc.gridx = 0; gbc.gridy = 0;
-        profilePanel.add(new JLabel("👤 Name:"), gbc);
-        
-        gbc.gridx = 1;
-        nameField = new JTextField();
-        nameField.setEditable(false);
-        profilePanel.add(nameField, gbc);
-        
-        // Email field
+        addFormField(formPanel, "🆔 Tutor ID:", tutorIdField = createTextField(false), gbc);
+
+        // Name field
         gbc.gridx = 0; gbc.gridy = 1;
-        profilePanel.add(new JLabel("📧 Email:"), gbc);
-        
-        gbc.gridx = 1;
-        emailField = new JTextField();
-        profilePanel.add(emailField, gbc);
-        
-        // Contact field
+        addFormField(formPanel, "👤 Name:", nameField = createTextField(false), gbc);
+
+        // IC/Passport field
         gbc.gridx = 0; gbc.gridy = 2;
-        profilePanel.add(new JLabel("📞 Contact:"), gbc);
-        
-        gbc.gridx = 1;
-        contactField = new JTextField();
-        profilePanel.add(contactField, gbc);
-        
-        // Subjects list
+        addFormField(formPanel, "📄 IC/Passport:", icPassportField = createTextField(false), gbc);
+
+        // Email field
         gbc.gridx = 0; gbc.gridy = 3;
-        profilePanel.add(new JLabel("📚 Subjects:"), gbc);
-        
-        gbc.gridx = 1;
-        subjectsList = new JList<>();
-        JScrollPane subjectsScroll = new JScrollPane(subjectsList);
-        subjectsScroll.setPreferredSize(new Dimension(200, 100));
-        profilePanel.add(subjectsScroll, gbc);
-        
-        // Levels list
+        addFormField(formPanel, "📧 Email:", emailField = createTextField(true), gbc);
+
+        // Contact field
         gbc.gridx = 0; gbc.gridy = 4;
-        profilePanel.add(new JLabel("🎓 Levels:"), gbc);
-        
-        gbc.gridx = 1;
-        levelsList = new JList<>();
-        JScrollPane levelsScroll = new JScrollPane(levelsList);
-        levelsScroll.setPreferredSize(new Dimension(200, 100));
-        profilePanel.add(levelsScroll, gbc);
-        
+        addFormField(formPanel, "📞 Contact:", contactField = createTextField(true), gbc);
+
+        // Address field
+        gbc.gridx = 0; gbc.gridy = 5;
+        addFormField(formPanel, "🏠 Address:", addressField = createTextField(true), gbc);
+
         // Update button
-        gbc.gridx = 1; gbc.gridy = 5;
+        gbc.gridx = 0; gbc.gridy = 7;
+        gbc.gridwidth = 2;
         gbc.anchor = GridBagConstraints.EAST;
+        gbc.insets = new Insets(25, 15, 15, 15);
         updateProfileButton = new JButton("💾 Update Profile");
-        updateProfileButton.setBackground(new Color(0, 120, 215));
-        updateProfileButton.setForeground(Color.BLACK);
-        updateProfileButton.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        profilePanel.add(updateProfileButton, gbc);
+        updateProfileButton.setBackground(new Color(0, 123, 255));
+        updateProfileButton.setForeground(Color.WHITE);
+        updateProfileButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        updateProfileButton.setBorder(BorderFactory.createEmptyBorder(12, 24, 12, 24));
+        updateProfileButton.setFocusPainted(false);
+        updateProfileButton.setOpaque(true);
+        updateProfileButton.setBorderPainted(false);
+        updateProfileButton.addActionListener(e -> onUpdateProfile());
+        formPanel.add(updateProfileButton, gbc);
+
+        panel.add(titleLabel, BorderLayout.NORTH);
+        panel.add(formPanel, BorderLayout.CENTER);
+
+        return panel;
     }
 
-    private void setupClassesPanel() {
-        // Header
-        JLabel headerLabel = new JLabel("📚 My Classes");
-        headerLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        classesPanel.add(headerLabel, BorderLayout.NORTH);
-        
-        // Table
-        classesTable = new JTable();
-        JScrollPane scrollPane = new JScrollPane(classesTable);
-        classesPanel.add(scrollPane, BorderLayout.CENTER);
-        
-        // Buttons panel
-        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        buttonsPanel.setBackground(Color.WHITE);
-        
-        addClassButton = new JButton("➕ Add Class");
-        updateClassButton = new JButton("✏️ Update Class");
-        deleteClassButton = new JButton("🗑️ Delete Class");
-        
-        // Style buttons
-        for (JButton button : new JButton[]{addClassButton, updateClassButton, deleteClassButton}) {
-            button.setFont(new Font("Segoe UI", Font.BOLD, 12));
-            button.setPreferredSize(new Dimension(150, 35));
-        }
-        
-        addClassButton.setBackground(new Color(0, 120, 215));
-        updateClassButton.setBackground(new Color(255, 193, 7));
-        deleteClassButton.setBackground(new Color(255, 0, 0));
-        
-        buttonsPanel.add(addClassButton);
-        buttonsPanel.add(updateClassButton);
-        buttonsPanel.add(deleteClassButton);
-        
-        classesPanel.add(buttonsPanel, BorderLayout.SOUTH);
-    }
+    private JPanel createClassesPanel() {
+        JPanel panel = new JPanel(new BorderLayout(15, 15));
+        panel.setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
+        panel.setBackground(new Color(0xF8F9FA));
+        panel.setOpaque(true);
 
-    private void setupStudentsPanel() {
-        // Header
-        JLabel headerLabel = new JLabel("👥 My Students");
-        headerLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        studentsPanel.add(headerLabel, BorderLayout.NORTH);
-        
-        // Table
-        studentsTable = new JTable();
-        JScrollPane scrollPane = new JScrollPane(studentsTable);
-        studentsPanel.add(scrollPane, BorderLayout.CENTER);
-    }
+        JLabel titleLabel = new JLabel("📚 My Classes");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        titleLabel.setForeground(new Color(0x343A40));
 
-    private void initializeTables() {
-        // Classes table
+        // Initialize table
         classesTableModel = new DefaultTableModel(
             new String[]{"Subject", "Level", "Schedule", "Students Count"}, 0
         ) {
@@ -263,12 +188,55 @@ public class tutor_dashboard extends JFrame {
                 return false;
             }
         };
-        classesTable.setModel(classesTableModel);
-        classesTable.getTableHeader().setBackground(new Color(0x007BFF));
-        classesTable.getTableHeader().setForeground(Color.WHITE);
+        classesTable = new JTable(classesTableModel);
+        classesTable.setRowHeight(35);
+        classesTable.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        classesTable.getTableHeader().setBackground(new Color(0xF8F9FA));
+        classesTable.getTableHeader().setForeground(Color.BLACK);
         classesTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
+        classesTable.setShowGrid(true);
+        classesTable.setGridColor(new Color(0xDEE2E6));
+        classesTable.setSelectionBackground(new Color(0xE7F3FF));
+        classesTable.setBackground(Color.WHITE);
 
-        // Students table
+        JScrollPane scrollPane = new JScrollPane(classesTable);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+
+        // Buttons panel
+        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
+        buttonsPanel.setBackground(new Color(0xF8F9FA));
+        buttonsPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 0, 0));
+
+        addClassButton = createStyledButton("➕ Add Class", new Color(40, 167, 69));
+        updateClassButton = createStyledButton("✏️ Update Class", new Color(255, 193, 7));
+        deleteClassButton = createStyledButton("🗑️ Delete Class", new Color(220, 53, 69));
+
+        addClassButton.addActionListener(e -> onAddClass());
+        updateClassButton.addActionListener(e -> onUpdateClass());
+        deleteClassButton.addActionListener(e -> onDeleteClass());
+
+        buttonsPanel.add(addClassButton);
+        buttonsPanel.add(updateClassButton);
+        buttonsPanel.add(deleteClassButton);
+
+        panel.add(titleLabel, BorderLayout.NORTH);
+        panel.add(scrollPane, BorderLayout.CENTER);
+        panel.add(buttonsPanel, BorderLayout.SOUTH);
+
+        return panel;
+    }
+
+    private JPanel createStudentsPanel() {
+        JPanel panel = new JPanel(new BorderLayout(15, 15));
+        panel.setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
+        panel.setBackground(new Color(0xF8F9FA));
+        panel.setOpaque(true);
+
+        JLabel titleLabel = new JLabel("👥 My Students");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        titleLabel.setForeground(new Color(0x343A40));
+
+        // Initialize table
         studentsTableModel = new DefaultTableModel(
             new String[]{"ID", "Name", "Subject", "Level"}, 0
         ) {
@@ -277,25 +245,36 @@ public class tutor_dashboard extends JFrame {
                 return false;
             }
         };
-        studentsTable.setModel(studentsTableModel);
-        studentsTable.getTableHeader().setBackground(new Color(0x007BFF));
-        studentsTable.getTableHeader().setForeground(Color.WHITE);
+        studentsTable = new JTable(studentsTableModel);
+        studentsTable.setRowHeight(35);
+        studentsTable.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        studentsTable.getTableHeader().setBackground(new Color(0xF8F9FA));
+        studentsTable.getTableHeader().setForeground(Color.BLACK);
         studentsTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
+        studentsTable.setShowGrid(true);
+        studentsTable.setGridColor(new Color(0xDEE2E6));
+        studentsTable.setSelectionBackground(new Color(0xE7F3FF));
+        studentsTable.setBackground(Color.WHITE);
+
+        JScrollPane scrollPane = new JScrollPane(studentsTable);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+
+        panel.add(titleLabel, BorderLayout.NORTH);
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        return panel;
     }
 
-    private void addActionListeners() {
-        logoutButton.addActionListener(e -> onLogout());
-        updateProfileButton.addActionListener(e -> onUpdateProfile());
-        addClassButton.addActionListener(e -> onAddClass());
-        updateClassButton.addActionListener(e -> onUpdateClass());
-        deleteClassButton.addActionListener(e -> onDeleteClass());
-
-        // Window listeners
-        addWindowListener(new WindowAdapter() {
-            public void windowClosing(WindowEvent e) {
-                onLogout();
-            }
-        });
+    private JButton createStyledButton(String text, Color bgColor) {
+        JButton button = new JButton(text);
+        button.setBackground(bgColor);
+        button.setForeground(Color.WHITE);
+        button.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        button.setBorder(BorderFactory.createEmptyBorder(12, 24, 12, 24));
+        button.setFocusPainted(false);
+        button.setOpaque(true);
+        button.setBorderPainted(false);
+        return button;
     }
 
     private void loadAllData() {
@@ -305,23 +284,68 @@ public class tutor_dashboard extends JFrame {
     }
 
     private void loadProfileData() {
-        nameField.setText(currentTutor.getName());
-        emailField.setText(currentTutor.getEmail());
-        contactField.setText(currentTutor.getContactNumber());
+        try {
+            File tutorsFile = new File(DATA_DIR + "/tutors.txt");
+            if (tutorsFile.exists()) {
+                BufferedReader reader = new BufferedReader(new FileReader(tutorsFile));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    String[] parts = line.split(",");
+                    if (parts.length >= 7 && parts[0].trim().equals("T001")) { // Using T001 as the tutor ID
+                        // Format the fields with proper labels
+                        tutorIdField.setText(parts[0].trim());
+                        nameField.setText(parts[1].trim());
+                        icPassportField.setText(parts[2].trim());
+                        emailField.setText(parts[3].trim());
+                        contactField.setText(parts[4].trim());
+                        addressField.setText(parts[5].trim());
 
-        // Load subjects
-        DefaultListModel<String> subjectsModel = new DefaultListModel<>();
-        for (String subject : currentTutor.getSubjects()) {
-            subjectsModel.addElement(subject);
-        }
-        subjectsList.setModel(subjectsModel);
+                        // Update labels with icons and better formatting
+                        updateFormLabels();
 
-        // Load levels
-        DefaultListModel<String> levelsModel = new DefaultListModel<>();
-        for (String level : currentTutor.getLevels()) {
-            levelsModel.addElement(level);
+                        // Update the welcome label with the tutor's ID and name
+                        welcomeLabel.setText(String.format("Welcome, %s (%s)", parts[1].trim(), parts[0].trim()));
+                        
+                        // Update current tutor object with latest data
+                        currentTutor.setName(parts[1].trim());
+                        currentTutor.setEmail(parts[3].trim());
+                        currentTutor.setContactNumber(parts[4].trim());
+
+                        // Set window title with tutor ID and name
+                        setTitle(String.format("Tutor Dashboard - %s (%s)", parts[1].trim(), parts[0].trim()));
+                        break;
+                    }
+                }
+                reader.close();
+            }
+        } catch (IOException e) {
+            showError("Error loading profile", e.getMessage());
         }
-        levelsList.setModel(levelsModel);
+    }
+
+    private void updateFormLabels() {
+        // Update the form field labels with better formatting
+        for (Component comp : profilePanel.getComponents()) {
+            if (comp instanceof JLabel) {
+                JLabel label = (JLabel) comp;
+                String text = label.getText();
+                if (text.contains("Tutor ID:")) {
+                    label.setText("🆔 Tutor ID & Name:");
+                } else if (text.contains("Name:")) {
+                    label.setText("👤 Full Name:");
+                } else if (text.contains("IC/Passport:")) {
+                    label.setText("📄 IC/Passport No:");
+                } else if (text.contains("Email:")) {
+                    label.setText("📧 Email Address:");
+                } else if (text.contains("Contact:")) {
+                    label.setText("📞 Contact Number:");
+                } else if (text.contains("Address:")) {
+                    label.setText("🏠 Home Address:");
+                }
+                label.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                label.setForeground(new Color(0x343A40));
+            }
+        }
     }
 
     private void loadClassesData() {
@@ -345,8 +369,7 @@ public class tutor_dashboard extends JFrame {
                 reader.close();
             }
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "Error loading classes: " + e.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            showError("Error loading classes", e.getMessage());
         }
     }
 
@@ -371,8 +394,7 @@ public class tutor_dashboard extends JFrame {
                 reader.close();
             }
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "Error loading students: " + e.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            showError("Error loading students", e.getMessage());
         }
     }
 
@@ -398,48 +420,66 @@ public class tutor_dashboard extends JFrame {
     }
 
     private void onUpdateProfile() {
-        // Show dialog to update profile
-        JTextField emailField = new JTextField(currentTutor.getEmail());
-        JTextField contactField = new JTextField(currentTutor.getContactNumber());
-        JTextField subjectField = new JTextField();
-        JTextField levelField = new JTextField();
+        String email = emailField.getText().trim();
+        String contact = contactField.getText().trim();
+        String address = addressField.getText().trim();
+        
+        if (email.isEmpty() || contact.isEmpty() || address.isEmpty()) {
+            showError("Validation Error", "Please fill in all fields.");
+            return;
+        }
 
-        Object[] message = {
-            "📧 Email:", emailField,
-            "📞 Contact Number:", contactField,
-            "📚 Add Subject:", subjectField,
-            "🎓 Add Level:", levelField
-        };
+        // Validate email format
+        if (!email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+            showError("Validation Error", "Please enter a valid email address.");
+            return;
+        }
 
-        int option = JOptionPane.showConfirmDialog(this, message, "Update Profile",
-                JOptionPane.OK_CANCEL_OPTION);
+        // Validate contact format (allow +, -, spaces, parentheses, and numbers)
+        if (!contact.matches("^[0-9+\\-\\s()]+$")) {
+            showError("Validation Error", "Please enter a valid contact number.");
+            return;
+        }
 
-        if (option == JOptionPane.OK_OPTION) {
-            currentTutor.setEmail(emailField.getText().trim());
-            currentTutor.setContactNumber(contactField.getText().trim());
-            
-            String newSubject = subjectField.getText().trim();
-            String newLevel = levelField.getText().trim();
-            
-            if (!newSubject.isEmpty()) {
-                currentTutor.addSubject(newSubject);
+        try {
+            List<String> lines = new ArrayList<>();
+            File tutorsFile = new File(DATA_DIR + "/tutors.txt");
+            BufferedReader reader = new BufferedReader(new FileReader(tutorsFile));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length >= 7 && parts[0].trim().equals("T001")) {
+                    // Preserve ID, name, IC/passport, and status while updating email, contact, and address
+                    lines.add(String.format("%s,%s,%s,%s,%s,%s,%s",
+                            parts[0].trim(), parts[1].trim(), parts[2].trim(),
+                            email, contact, address, parts[6].trim()));
+                } else {
+                    lines.add(line);
+                }
             }
-            if (!newLevel.isEmpty()) {
-                currentTutor.addLevel(newLevel);
-            }
+            reader.close();
 
-            // Update the display
-            loadProfileData();
-            JOptionPane.showMessageDialog(this, "Profile updated successfully!", "Success",
-                    JOptionPane.INFORMATION_MESSAGE);
+            FileWriter writer = new FileWriter(tutorsFile);
+            for (String updatedLine : lines) {
+                writer.write(updatedLine + "\n");
+            }
+            writer.close();
+
+            // Update current tutor object
+            currentTutor.setEmail(email);
+            currentTutor.setContactNumber(contact);
+            
+            showSuccess("Profile updated successfully!");
+        } catch (IOException e) {
+            showError("Error updating profile", e.getMessage());
         }
     }
 
     private void onAddClass() {
-        // Show dialog to add class
         JComboBox<String> subjectBox = new JComboBox<>(currentTutor.getSubjects().toArray(new String[0]));
         JComboBox<String> levelBox = new JComboBox<>(currentTutor.getLevels().toArray(new String[0]));
         JTextField scheduleField = new JTextField();
+        scheduleField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
 
         Object[] message = {
             "📚 Subject:", subjectBox,
@@ -448,7 +488,7 @@ public class tutor_dashboard extends JFrame {
         };
 
         int option = JOptionPane.showConfirmDialog(this, message, "Add Class",
-                JOptionPane.OK_CANCEL_OPTION);
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
 
         if (option == JOptionPane.OK_OPTION) {
             String subject = (String) subjectBox.getSelectedItem();
@@ -456,24 +496,20 @@ public class tutor_dashboard extends JFrame {
             String schedule = scheduleField.getText().trim();
 
             if (subject == null || level == null || schedule.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "All fields are required!",
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                showError("Validation Error", "All fields are required!");
                 return;
             }
 
             try {
-                // Add new class to classes.txt
                 FileWriter writer = new FileWriter(DATA_DIR + "/classes.txt", true);
                 writer.write(String.format("%s,%s,%s,%s,0\n",
                         subject, level, schedule, currentTutor.getUsername()));
                 writer.close();
 
                 loadClassesData();
-                JOptionPane.showMessageDialog(this, "Class added successfully!", "Success",
-                        JOptionPane.INFORMATION_MESSAGE);
+                showSuccess("Class added successfully!");
             } catch (IOException e) {
-                JOptionPane.showMessageDialog(this, "Error adding class: " + e.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                showError("Error adding class", e.getMessage());
             }
         }
     }
@@ -481,8 +517,7 @@ public class tutor_dashboard extends JFrame {
     private void onUpdateClass() {
         int selectedRow = classesTable.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Please select a class to update",
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            showError("Selection Error", "Please select a class to update");
             return;
         }
 
@@ -491,6 +526,7 @@ public class tutor_dashboard extends JFrame {
         String schedule = (String) classesTable.getValueAt(selectedRow, 2);
 
         JTextField scheduleField = new JTextField(schedule);
+        scheduleField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
 
         Object[] message = {
             "📚 Subject: " + subject,
@@ -499,19 +535,17 @@ public class tutor_dashboard extends JFrame {
         };
 
         int option = JOptionPane.showConfirmDialog(this, message, "Update Class",
-                JOptionPane.OK_CANCEL_OPTION);
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
 
         if (option == JOptionPane.OK_OPTION) {
             String newSchedule = scheduleField.getText().trim();
 
             if (newSchedule.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Schedule cannot be empty!",
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                showError("Validation Error", "Schedule cannot be empty!");
                 return;
             }
 
             try {
-                // Update class in classes.txt
                 List<String> lines = new ArrayList<>();
                 File classesFile = new File(DATA_DIR + "/classes.txt");
                 BufferedReader reader = new BufferedReader(new FileReader(classesFile));
@@ -537,11 +571,9 @@ public class tutor_dashboard extends JFrame {
                 writer.close();
 
                 loadClassesData();
-                JOptionPane.showMessageDialog(this, "Class updated successfully!", "Success",
-                        JOptionPane.INFORMATION_MESSAGE);
+                showSuccess("Class updated successfully!");
             } catch (IOException e) {
-                JOptionPane.showMessageDialog(this, "Error updating class: " + e.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                showError("Error updating class", e.getMessage());
             }
         }
     }
@@ -549,8 +581,7 @@ public class tutor_dashboard extends JFrame {
     private void onDeleteClass() {
         int selectedRow = classesTable.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Please select a class to delete",
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            showError("Selection Error", "Please select a class to delete");
             return;
         }
 
@@ -559,11 +590,10 @@ public class tutor_dashboard extends JFrame {
 
         int confirm = JOptionPane.showConfirmDialog(this,
                 "Are you sure you want to delete this class?\n" + subject + " (" + level + ")",
-                "Confirm Delete", JOptionPane.YES_NO_OPTION);
+                "Confirm Delete", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 
         if (confirm == JOptionPane.YES_OPTION) {
             try {
-                // Delete class from classes.txt
                 List<String> lines = new ArrayList<>();
                 File classesFile = new File(DATA_DIR + "/classes.txt");
                 BufferedReader reader = new BufferedReader(new FileReader(classesFile));
@@ -585,17 +615,58 @@ public class tutor_dashboard extends JFrame {
                 writer.close();
 
                 loadClassesData();
-                JOptionPane.showMessageDialog(this, "Class deleted successfully!", "Success",
-                        JOptionPane.INFORMATION_MESSAGE);
+                showSuccess("Class deleted successfully!");
             } catch (IOException e) {
-                JOptionPane.showMessageDialog(this, "Error deleting class: " + e.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                showError("Error deleting class", e.getMessage());
             }
         }
     }
 
-    private void onLogout() {
-        dispose();
-        SwingUtilities.invokeLater(() -> new main_page().setVisible(true));
+    private void showError(String title, String message) {
+        JOptionPane.showMessageDialog(this, message, title, JOptionPane.ERROR_MESSAGE);
     }
-}
+
+    private void showSuccess(String message) {
+        JOptionPane.showMessageDialog(this, message, "Success", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private JTextField createTextField(boolean editable) {
+        JTextField field = new JTextField(25);
+        field.setEditable(editable);
+        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        field.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(0xDEE2E6)),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+        return field;
+    }
+
+    private void addFormField(JPanel panel, String labelText, JTextField field, GridBagConstraints gbc) {
+        JLabel label = new JLabel(labelText);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        label.setForeground(new Color(0x343A40));
+        
+        gbc.gridx = 0;
+        panel.add(label, gbc);
+        
+        gbc.gridx = 1;
+        field.setPreferredSize(new Dimension(300, 35)); // Set a fixed width for better alignment
+        panel.add(field, gbc);
+    }
+
+    public static void main(String[] args) {
+        // Create a test tutor for demonstration
+        Tutor testTutor = new Tutor("testTutor", "password", "Test Tutor", "test@email.com", "123456789");
+
+        // Run the application
+        SwingUtilities.invokeLater(() -> {
+            try {
+                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            tutor_dashboard frame = new tutor_dashboard(testTutor);
+            frame.setVisible(true);
+        });
+    }
+}   
