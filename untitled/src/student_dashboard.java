@@ -1,14 +1,10 @@
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.*;
 import java.io.*;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
-import java.util.HashMap;
-import java.util.Map;
 
 public class student_dashboard extends JFrame {
     private JPanel mainPanel;
@@ -37,9 +33,9 @@ public class student_dashboard extends JFrame {
     private JTextField profileContactField;
     private JButton updateProfileButton;
 
-    private String currentUser;
-    private String currentStudentId;
-    private String displayName;
+    private final String currentUser;
+    private final String currentStudentId;
+    private final String displayName;
     private static final String DATA_DIR = "data";
     private static int nextRequestId = 1009; // Start after existing requests
 
@@ -495,6 +491,8 @@ public class student_dashboard extends JFrame {
 
         } catch (IOException e) {
             System.err.println("Error loading schedule data: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Error loading schedule data: " + e.getMessage(), 
+                "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -507,7 +505,6 @@ public class student_dashboard extends JFrame {
                 String[] parts = line.split(",");
                 if (parts.length >= 9 && parts[1].trim().equals(currentStudentId)) {
                     String requestId = parts[0].trim();
-                    String action = parts[2].trim();
                     String reason = parts[5].trim().replace("\"", "");
                     String date = parts[6].trim();
                     String status = parts[7].trim();
@@ -520,6 +517,8 @@ public class student_dashboard extends JFrame {
             }
         } catch (IOException e) {
             System.err.println("Error loading request data: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Error loading request data: " + e.getMessage(), 
+                "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -545,6 +544,8 @@ public class student_dashboard extends JFrame {
             }
         } catch (IOException e) {
             System.err.println("Error loading payment data: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Error loading payment data: " + e.getMessage(), 
+                "Error", JOptionPane.ERROR_MESSAGE);
         }
 
         // Update balance
@@ -564,6 +565,8 @@ public class student_dashboard extends JFrame {
             }
         } catch (IOException e) {
             System.err.println("Error loading profile data: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Error loading profile data: " + e.getMessage(), 
+                "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -580,6 +583,8 @@ public class student_dashboard extends JFrame {
             }
         } catch (IOException e) {
             System.err.println("Error loading balance data: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Error loading balance data: " + e.getMessage(), 
+                "Error", JOptionPane.ERROR_MESSAGE);
         }
         paymentStatusLabel.setText("Balance information not available");
     }
@@ -641,7 +646,19 @@ public class student_dashboard extends JFrame {
             return;
         }
 
-        JOptionPane.showMessageDialog(this, "Profile updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+        // Validate contact format (basic validation)
+        if (!contact.matches("^[0-9+\\-\\s()]+$")) {
+            JOptionPane.showMessageDialog(this, "Please enter a valid contact number.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            // Here you would typically update the students.txt file with the new information
+            // For now, we'll just show a success message
+            JOptionPane.showMessageDialog(this, "Profile updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error updating profile: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private String formatTime(String time24) {
