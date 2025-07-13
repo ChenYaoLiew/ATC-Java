@@ -115,7 +115,8 @@ public class main_page extends JFrame {
         // Open appropriate dashboard based on user role
         switch (user.getRole()) {
             case "admin":
-                new admin_dashboard(user.getName()).setVisible(true);
+                System.out.println("Opening Tutor dashboard for " + user.getName());
+//                new admin_dashboard(user.getName()).setVisible(true);
                 break;
             case "receptionist":
                 new receptionist_dashboard(user.getName()).setVisible(true);

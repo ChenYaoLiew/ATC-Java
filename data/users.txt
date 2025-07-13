@@ -1,0 +1,4 @@
+admin,admin123,Admin,Elson
+receptionist,recep123,Receptionist,ChenYao
+tutor,tutor123,Tutor,Yin Yin
+student,student123,Student,Javion
