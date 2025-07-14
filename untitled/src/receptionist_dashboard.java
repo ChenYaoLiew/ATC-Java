@@ -3,6 +3,10 @@ import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
@@ -45,26 +49,100 @@ public class receptionist_dashboard extends JFrame {
     private JButton updateProfileButton;
     
     private String currentUser;
-    private static int nextStudentId = 1001; // Starting student ID
+    private static int nextStudentNumber = 1;
+    private static int nextPaymentNumber = 1;
+    private Map<String, String> subjectMap = new HashMap<>();
+    private Map<String, String> levelSubjectMap = new HashMap<>();
+    private Random random = new Random();
     
-    // Define base directory for data files
     private static final String DATA_DIR = "data";
     
-    public receptionist_dashboard(String userName) {
+        public receptionist_dashboard(String userName) {
         this.currentUser = userName;
         
         setContentPane(mainPanel);
         setTitle("Receptionist Dashboard - " + userName);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(900, 700);
+        setSize(1200, 800);
         setLocationRelativeTo(null);
         
         welcomeLabel.setText("Welcome, " + userName + " (Receptionist)");
         
+        loadSubjects();
         initializeComponents();
+        applyModernStyling();
         setupEventListeners();
         loadStudentData();
         loadProfile();
+        updateNextPaymentNumber();
+    }
+    
+    private void applyModernStyling() {
+        // Apply modern styling to existing form components
+        
+        // Style main panel
+        mainPanel.setBackground(new Color(0xF8F9FA));
+        
+        // Style welcome label
+        welcomeLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        welcomeLabel.setForeground(Color.WHITE);
+        
+        // Style logout button
+        logoutButton.setBackground(new Color(220, 53, 69));
+        logoutButton.setForeground(Color.WHITE);
+        logoutButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        logoutButton.setBorder(BorderFactory.createEmptyBorder(12, 24, 12, 24));
+        logoutButton.setFocusPainted(false);
+        logoutButton.setOpaque(true);
+        logoutButton.setBorderPainted(false);
+        
+        // Style tabbed pane
+        tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        tabbedPane.setBackground(new Color(0xF8F9FA));
+        
+        // Style text fields
+        styleTextField(studentNameField);
+        styleTextField(icPassportField);
+        styleTextField(emailField);
+        styleTextField(contactField);
+        styleTextField(paymentAmountField);
+        styleTextField(profileNameField);
+        styleTextField(profileContactField);
+        
+        // Style text areas
+        styleTextArea(addressArea);
+        styleTextArea(receiptArea);
+        receiptArea.setEditable(false);
+        receiptArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        
+        // Style combo boxes
+        styleComboBox(levelCombo);
+        styleComboBox(paymentStudentCombo);
+        styleComboBox(paymentMethodCombo);
+        
+        // Style list
+        styleList(subjectsList);
+        
+        // Style buttons
+        styleButton(registerStudentButton, new Color(40, 167, 69)); // Green
+        styleButton(updateEnrollmentButton, new Color(0, 123, 255)); // Blue
+        styleButton(deleteStudentButton, new Color(220, 53, 69)); // Red
+        styleButton(acceptPaymentButton, new Color(40, 167, 69)); // Green
+        styleButton(generateReceiptButton, new Color(0, 123, 255)); // Blue
+        styleButton(updateProfileButton, new Color(0, 123, 255)); // Blue
+        
+        // Style table
+        if (studentsTable != null) {
+            studentsTable.setRowHeight(35);
+            studentsTable.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            studentsTable.getTableHeader().setBackground(new Color(0x007BFF));
+            studentsTable.getTableHeader().setForeground(Color.WHITE);
+            studentsTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
+            studentsTable.setShowGrid(true);
+            studentsTable.setGridColor(new Color(0xDEE2E6));
+            studentsTable.setSelectionBackground(new Color(0xE7F3FF));
+            studentsTable.setBackground(Color.WHITE);
+        }
     }
     
     private void initializeComponents() {
@@ -72,18 +150,18 @@ public class receptionist_dashboard extends JFrame {
         String[] levels = {"Secondary 1", "Secondary 2", "Secondary 3", "Secondary 4", "Secondary 5"};
         levelCombo.setModel(new DefaultComboBoxModel<>(levels));
         
-        // Initialize Subjects List (max 3 selections)
-        String[] subjects = {"Mathematics", "English", "Science", "Chinese", "Malay", "History", 
-                           "Geography", "Physics", "Chemistry", "Biology", "Economics", "Accounting"};
-        subjectsList.setListData(subjects);
-        subjectsList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        // Initialize Subjects List based on selected level
+        updateSubjectsList();
+        
+        // Add listener to level combo to update subjects
+        levelCombo.addActionListener(e -> updateSubjectsList());
         
         // Initialize Payment Method ComboBox
         String[] paymentMethods = {"Cash", "Credit Card", "Debit Card", "Bank Transfer", "Online Banking"};
         paymentMethodCombo.setModel(new DefaultComboBoxModel<>(paymentMethods));
         
-        // Initialize Students Table FIRST (before refreshStudentCombo)
-        String[] columnNames = {"Student ID", "Name", "IC/Passport", "Email", "Contact", "Level", "Subjects", "Status"};
+        // Initialize Students Table
+        String[] columnNames = {"Student ID", "Name", "IC/Passport", "Email", "Contact", "Address", "Level", "Subjects", "Status"};
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -93,7 +171,7 @@ public class receptionist_dashboard extends JFrame {
         studentsTable.setModel(tableModel);
         studentsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         
-        // Initialize Student Selection ComboBox AFTER tableModel is created
+        // Initialize Student Selection ComboBox
         paymentStudentCombo.setModel(new DefaultComboBoxModel<>());
         refreshStudentCombo();
     }
@@ -121,6 +199,90 @@ public class receptionist_dashboard extends JFrame {
         updateProfileButton.addActionListener(e -> updateProfile());
     }
     
+    
+    
+    private void styleTextField(JTextField field) {
+        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        field.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(0xDEE2E6)),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+        field.setBackground(Color.WHITE);
+    }
+    
+    private void styleTextArea(JTextArea area) {
+        area.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
+        area.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(0xDEE2E6)),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+        area.setBackground(Color.WHITE);
+    }
+    
+    private void styleComboBox(JComboBox<?> combo) {
+        combo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        combo.setBorder(BorderFactory.createLineBorder(new Color(0xDEE2E6)));
+        combo.setBackground(Color.WHITE);
+    }
+    
+    private void styleList(JList<?> list) {
+        list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        list.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        list.setSelectionBackground(new Color(0xE7F3FF));
+        list.setBackground(Color.WHITE);
+        list.setBorder(BorderFactory.createLineBorder(new Color(0xDEE2E6)));
+    }
+    
+    private void styleButton(JButton button, Color backgroundColor) {
+        button.setBackground(backgroundColor);
+        button.setForeground(Color.WHITE);
+        button.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        button.setBorder(BorderFactory.createEmptyBorder(12, 24, 12, 24));
+        button.setFocusPainted(false);
+        button.setOpaque(true);
+        button.setBorderPainted(false);
+    }
+    
+    private void loadSubjects() {
+        subjectMap.clear();
+        levelSubjectMap.clear();
+        
+        String currentDir = System.getProperty("user.dir");
+        try (BufferedReader reader = new BufferedReader(new FileReader(Paths.get(currentDir, DATA_DIR, "subject.txt").toString()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length >= 3) {
+                    String subjectId = parts[0].trim();
+                    String subjectName = parts[1].trim();
+                    String level = parts[2].trim();
+                    
+                    subjectMap.put(subjectId, subjectName);
+                    levelSubjectMap.put(subjectId, level);
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error loading subjects: " + e.getMessage());
+        }
+    }
+    
+    private void updateSubjectsList() {
+        String selectedLevel = (String) levelCombo.getSelectedItem();
+        List<String> availableSubjects = new ArrayList<>();
+        
+        for (Map.Entry<String, String> entry : levelSubjectMap.entrySet()) {
+            if (entry.getValue().equals(selectedLevel)) {
+                String subjectId = entry.getKey();
+                String subjectName = subjectMap.get(subjectId);
+                availableSubjects.add(subjectName + " (" + subjectId + ")");
+            }
+        }
+        
+        subjectsList.setListData(availableSubjects.toArray(new String[0]));
+    }
+    
     private void registerStudent() {
         // Validate input fields
         if (studentNameField.getText().trim().isEmpty() || 
@@ -141,38 +303,43 @@ public class receptionist_dashboard extends JFrame {
             return;
         }
         
-        // Create student record
-        String studentId = String.valueOf(nextStudentId++);
+        // Generate new student ID
+        String studentId = generateNextStudentId();
         String name = studentNameField.getText().trim();
         String icPassport = icPassportField.getText().trim();
         String email = emailField.getText().trim();
         String contact = contactField.getText().trim();
         String address = addressArea.getText().trim();
         String level = (String) levelCombo.getSelectedItem();
-        String subjects = String.join(", ", selectedSubjects);
         String enrollmentDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
         String status = "Active";
         
-        // Save to file
+        // Save student to students.txt
         String currentDir = System.getProperty("user.dir");
         try (FileWriter writer = new FileWriter(Paths.get(currentDir, DATA_DIR, "students.txt").toString(), true)) {
-            // Format: studentId,name,icPassport,email,contact,address,level,subjects,date,status
+            // Format: studentId,name,icPassport,email,contact,address,enrollmentDate,level,status
             writer.write(studentId + "," + name + "," + icPassport + "," + email + "," + 
-                        contact + "," + address + "," + level + "," + subjects + "," + 
-                        enrollmentDate + "," + status + "\n");
+                        contact + "," + address + "," + enrollmentDate + "," + level + "," + status + "\n");
             
-            // Create user account for the student
-            createStudentUserAccount(name, studentId, email);
+            // Save student subjects
+            saveStudentSubjects(studentId, selectedSubjects);
+            
+            // Create user account for the student and get credentials
+            String[] credentials = createStudentUserAccount(name, studentId, email);
             
             // Add to table
-            tableModel.addRow(new Object[]{studentId, name, icPassport, email, contact, level, subjects, status});
+            String subjectsDisplay = getSubjectsDisplayString(selectedSubjects);
+            tableModel.addRow(new Object[]{studentId, name, icPassport, email, contact, address, level, subjectsDisplay, status});
             
             // Refresh student dropdown
             refreshStudentCombo();
             
             JOptionPane.showMessageDialog(this, 
-                "Student registered successfully!\nStudent ID: " + studentId + 
-                "\nDefault login: student" + studentId + " / password123", 
+                "Student registered successfully!\n" +
+                "Student ID: " + studentId + "\n" +
+                "Username: " + credentials[0] + "\n" +
+                "Password: " + credentials[1] + "\n\n" +
+                "Please save these credentials for the student.", 
                 "Success", JOptionPane.INFORMATION_MESSAGE);
             
             // Clear form
@@ -184,6 +351,67 @@ public class receptionist_dashboard extends JFrame {
         }
     }
     
+    private String generateNextStudentId() {
+        // Find the highest existing student number
+        String currentDir = System.getProperty("user.dir");
+        try (BufferedReader reader = new BufferedReader(new FileReader(Paths.get(currentDir, DATA_DIR, "students.txt").toString()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length > 0 && parts[0].startsWith("S")) {
+                    try {
+                        int num = Integer.parseInt(parts[0].substring(1));
+                        if (num >= nextStudentNumber) {
+                            nextStudentNumber = num + 1;
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+        } catch (IOException e) {
+            // File doesn't exist yet, start with S001
+        }
+        
+        return String.format("S%03d", nextStudentNumber++);
+    }
+    
+    private void saveStudentSubjects(String studentId, List<String> selectedSubjects) {
+        String currentDir = System.getProperty("user.dir");
+        try (FileWriter writer = new FileWriter(Paths.get(currentDir, DATA_DIR, "student_subjects.txt").toString(), true)) {
+            for (String subjectDisplay : selectedSubjects) {
+                // Extract subject ID from display string like "Math (SUB001)"
+                String subjectId = extractSubjectId(subjectDisplay);
+                if (!subjectId.isEmpty()) {
+                    writer.write(studentId + "," + subjectId + "\n");
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error saving student subjects: " + e.getMessage());
+        }
+    }
+    
+    private String extractSubjectId(String subjectDisplay) {
+        // Extract SUB001 from "Math (SUB001)"
+        int start = subjectDisplay.lastIndexOf("(");
+        int end = subjectDisplay.lastIndexOf(")");
+        if (start != -1 && end != -1 && start < end) {
+            return subjectDisplay.substring(start + 1, end);
+        }
+        return "";
+    }
+    
+    private String getSubjectsDisplayString(List<String> selectedSubjects) {
+        List<String> subjectNames = new ArrayList<>();
+        for (String subjectDisplay : selectedSubjects) {
+            int parenIndex = subjectDisplay.indexOf(" (");
+            if (parenIndex != -1) {
+                subjectNames.add(subjectDisplay.substring(0, parenIndex));
+            } else {
+                subjectNames.add(subjectDisplay);
+            }
+        }
+        return String.join(", ", subjectNames);
+    }
+    
     private void updateEnrollment() {
         int selectedRow = studentsTable.getSelectedRow();
         if (selectedRow == -1) {
@@ -193,28 +421,86 @@ public class receptionist_dashboard extends JFrame {
         }
         
         String studentId = (String) tableModel.getValueAt(selectedRow, 0);
-        String currentSubjects = (String) tableModel.getValueAt(selectedRow, 6);
+        String currentSubjects = (String) tableModel.getValueAt(selectedRow, 7);
         
-        String newSubjects = JOptionPane.showInputDialog(this, 
-            "Current subjects: " + currentSubjects + "\n\nEnter new subjects (comma-separated, max 3):", 
-            "Update Enrollment", JOptionPane.QUESTION_MESSAGE);
+        // Show dialog to select new subjects
+        String level = (String) tableModel.getValueAt(selectedRow, 6);
+        List<String> availableSubjects = getSubjectsForLevel(level);
         
-        if (newSubjects != null && !newSubjects.trim().isEmpty()) {
-            String[] subjectArray = newSubjects.split(",");
-            if (subjectArray.length > 3) {
+        JList<String> subjectListDialog = new JList<>(availableSubjects.toArray(new String[0]));
+        subjectListDialog.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        
+        JScrollPane scrollPane = new JScrollPane(subjectListDialog);
+        scrollPane.setPreferredSize(new Dimension(300, 200));
+        
+        int result = JOptionPane.showConfirmDialog(this, scrollPane, 
+            "Select new subjects (max 3) for " + tableModel.getValueAt(selectedRow, 1), 
+            JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
+        
+        if (result == JOptionPane.OK_OPTION) {
+            List<String> selectedSubjects = subjectListDialog.getSelectedValuesList();
+            if (selectedSubjects.size() > 3) {
                 JOptionPane.showMessageDialog(this, "Maximum 3 subjects allowed.", 
                                             "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
             
-            // Update table
-            tableModel.setValueAt(newSubjects.trim(), selectedRow, 6);
+            // Update student subjects in file
+            updateStudentSubjectsFile(studentId, selectedSubjects);
             
-            // Update file (simplified - in production, you'd want proper file updating)
-            updateStudentFile();
+            // Update table
+            String subjectsDisplay = getSubjectsDisplayString(selectedSubjects);
+            tableModel.setValueAt(subjectsDisplay, selectedRow, 7);
             
             JOptionPane.showMessageDialog(this, "Enrollment updated successfully!", 
                                         "Success", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+    
+    private List<String> getSubjectsForLevel(String level) {
+        List<String> subjects = new ArrayList<>();
+        for (Map.Entry<String, String> entry : levelSubjectMap.entrySet()) {
+            if (entry.getValue().equals(level)) {
+                String subjectId = entry.getKey();
+                String subjectName = subjectMap.get(subjectId);
+                subjects.add(subjectName + " (" + subjectId + ")");
+            }
+        }
+        return subjects;
+    }
+    
+    private void updateStudentSubjectsFile(String studentId, List<String> selectedSubjects) {
+        String currentDir = System.getProperty("user.dir");
+        
+        // Read all existing student-subject relationships
+        List<String> allLines = new ArrayList<>();
+        try (BufferedReader reader = new BufferedReader(new FileReader(Paths.get(currentDir, DATA_DIR, "student_subjects.txt").toString()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length >= 2 && !parts[0].trim().equals(studentId)) {
+                    allLines.add(line); // Keep other students' subjects
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading student subjects: " + e.getMessage());
+        }
+        
+        // Add new subjects for this student
+        for (String subjectDisplay : selectedSubjects) {
+            String subjectId = extractSubjectId(subjectDisplay);
+            if (!subjectId.isEmpty()) {
+                allLines.add(studentId + "," + subjectId);
+            }
+        }
+        
+        // Write back to file
+        try (FileWriter writer = new FileWriter(Paths.get(currentDir, DATA_DIR, "student_subjects.txt").toString(), false)) {
+            for (String line : allLines) {
+                writer.write(line + "\n");
+            }
+        } catch (IOException e) {
+            System.err.println("Error updating student subjects: " + e.getMessage());
         }
     }
     
@@ -227,15 +513,50 @@ public class receptionist_dashboard extends JFrame {
         }
         
         String studentName = (String) tableModel.getValueAt(selectedRow, 1);
+        String studentId = (String) tableModel.getValueAt(selectedRow, 0);
+        
         int confirm = JOptionPane.showConfirmDialog(this, 
             "Are you sure you want to delete student: " + studentName + "?", 
             "Confirm Deletion", JOptionPane.YES_NO_OPTION);
         
         if (confirm == JOptionPane.YES_OPTION) {
+            // Remove from table
             tableModel.removeRow(selectedRow);
+            
+            // Update files
             updateStudentFile();
+            removeStudentSubjects(studentId);
+            
+            // Refresh student combo
+            refreshStudentCombo();
+            
             JOptionPane.showMessageDialog(this, "Student deleted successfully!", 
                                         "Success", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+    
+    private void removeStudentSubjects(String studentId) {
+        String currentDir = System.getProperty("user.dir");
+        List<String> remainingLines = new ArrayList<>();
+        
+        try (BufferedReader reader = new BufferedReader(new FileReader(Paths.get(currentDir, DATA_DIR, "student_subjects.txt").toString()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length >= 2 && !parts[0].trim().equals(studentId)) {
+                    remainingLines.add(line);
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading student subjects: " + e.getMessage());
+        }
+        
+        try (FileWriter writer = new FileWriter(Paths.get(currentDir, DATA_DIR, "student_subjects.txt").toString(), false)) {
+            for (String line : remainingLines) {
+                writer.write(line + "\n");
+            }
+        } catch (IOException e) {
+            System.err.println("Error updating student subjects: " + e.getMessage());
         }
     }
     
@@ -249,20 +570,26 @@ public class receptionist_dashboard extends JFrame {
             return;
         }
         
-        // Extract student ID from the combo box selection (format: "Name - ID")
         String studentId = extractStudentId(selectedStudent);
         
         try {
             double amount = Double.parseDouble(amountStr);
             String paymentMethod = (String) paymentMethodCombo.getSelectedItem();
-            String date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+            String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+            String period = new SimpleDateFormat("yyyy-MM").format(new Date());
+            
+            // Generate payment ID and receipt ID
+            String paymentId = generateNextPaymentId();
+            String receiptId = "RCP" + paymentId.substring(3); // RCP001 from PAY001
             
             // Save payment record
             String currentDir = System.getProperty("user.dir");
             try (FileWriter writer = new FileWriter(Paths.get(currentDir, DATA_DIR, "payments.txt").toString(), true)) {
-                writer.write(studentId + "," + amount + "," + paymentMethod + "," + date + "\n");
+                // Format: paymentId,studentId,description,amount,paymentMethod,timestamp,period,receiptId,status
+                writer.write(paymentId + "," + studentId + ",," + amount + "," + paymentMethod + "," + 
+                           timestamp + "," + period + "," + receiptId + ",Completed\n");
                 
-                JOptionPane.showMessageDialog(this, "Payment accepted successfully!", 
+                JOptionPane.showMessageDialog(this, "Payment accepted successfully!\nPayment ID: " + paymentId, 
                                             "Success", JOptionPane.INFORMATION_MESSAGE);
                 
                 // Clear payment fields
@@ -277,6 +604,30 @@ public class receptionist_dashboard extends JFrame {
         } catch (NumberFormatException e) {
             JOptionPane.showMessageDialog(this, "Please enter a valid amount.", 
                                         "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    private String generateNextPaymentId() {
+        return String.format("PAY%03d", nextPaymentNumber++);
+    }
+    
+    private void updateNextPaymentNumber() {
+        String currentDir = System.getProperty("user.dir");
+        try (BufferedReader reader = new BufferedReader(new FileReader(Paths.get(currentDir, DATA_DIR, "payments.txt").toString()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length > 0 && parts[0].startsWith("PAY")) {
+                    try {
+                        int num = Integer.parseInt(parts[0].substring(3));
+                        if (num >= nextPaymentNumber) {
+                            nextPaymentNumber = num + 1;
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+        } catch (IOException e) {
+            // File doesn't exist yet, start with PAY001
         }
     }
     
@@ -295,9 +646,10 @@ public class receptionist_dashboard extends JFrame {
         try {
             double amount = Double.parseDouble(amountStr);
             String paymentMethod = (String) paymentMethodCombo.getSelectedItem();
-            String date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+            String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+            String receiptId = "RCP" + String.format("%03d", nextPaymentNumber);
             
-            String receipt = generateReceiptText(studentId, selectedStudent, amount, paymentMethod, date);
+            String receipt = generateReceiptText(studentId, selectedStudent, amount, paymentMethod, timestamp, receiptId);
             receiptArea.setText(receipt);
             
         } catch (NumberFormatException e) {
@@ -306,16 +658,18 @@ public class receptionist_dashboard extends JFrame {
         }
     }
     
-    private String generateReceiptText(String studentId, String studentName, double amount, String paymentMethod, String date) {
+    private String generateReceiptText(String studentId, String studentName, double amount, String paymentMethod, String timestamp, String receiptId) {
         return "==========================================\n" +
                "           TUITION CENTER RECEIPT        \n" +
                "==========================================\n" +
-               "Receipt Date: " + date + "\n" +
+               "Receipt ID: " + receiptId + "\n" +
+               "Receipt Date: " + timestamp + "\n" +
                "Student: " + extractStudentName(studentName) + "\n" +
                "Student ID: " + studentId + "\n" +
                "Amount Paid: RM " + String.format("%.2f", amount) + "\n" +
                "Payment Method: " + paymentMethod + "\n" +
                "Received by: " + currentUser + "\n" +
+               "Status: Completed\n" +
                "==========================================\n" +
                "Thank you for your payment!\n" +
                "==========================================";
@@ -348,7 +702,7 @@ public class receptionist_dashboard extends JFrame {
         for (int i = 0; i < tableModel.getRowCount(); i++) {
             String studentName = (String) tableModel.getValueAt(i, 1);
             String studentId = (String) tableModel.getValueAt(i, 0);
-            String status = (String) tableModel.getValueAt(i, 7);
+            String status = (String) tableModel.getValueAt(i, 8);
             
             // Only add active students
             if ("Active".equals(status)) {
@@ -359,20 +713,51 @@ public class receptionist_dashboard extends JFrame {
         paymentStudentCombo.setModel(model);
     }
     
+    // Method to generate random username
+    private String generateRandomUsername(String studentName) {
+        // Remove spaces and take first part of name
+        String baseName = studentName.toLowerCase().replaceAll("\\s+", "");
+        if (baseName.length() > 6) {
+            baseName = baseName.substring(0, 6);
+        }
+        
+        // Add random 3-digit number
+        int randomNum = random.nextInt(900) + 100; // Generates 100-999
+        return baseName + randomNum;
+    }
+    
+    // Method to generate random password
+    private String generateRandomPassword() {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        StringBuilder password = new StringBuilder();
+        
+        // Generate 8-character password
+        for (int i = 0; i < 8; i++) {
+            password.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        
+        return password.toString();
+    }
+    
     // Method to create user account for student
-    private void createStudentUserAccount(String studentName, String studentId, String email) {
+    private String[] createStudentUserAccount(String studentName, String studentId, String email) {
         String currentDir = System.getProperty("user.dir");
+        
+        // Generate random credentials
+        String username = generateRandomUsername(studentName);
+        String password = generateRandomPassword();
+        String role = "student";
+        
         try (FileWriter writer = new FileWriter(Paths.get(currentDir, DATA_DIR, "users.txt").toString(), true)) {
-            // Format: username,password,role,name,student_id
-            String username = "student" + studentId;
-            String password = "password123"; // Default password
-            String role = "student";
-            
-            writer.write(username + "," + password + "," + role + "," + studentName + "," + studentId + "\n");
+            // Format: userId,username,password,role,name
+            writer.write(studentId + "," + username + "," + password + "," + role + "," + studentName + "\n");
             
         } catch (IOException e) {
             System.err.println("Error creating user account for student: " + e.getMessage());
         }
+        
+        // Return the generated credentials
+        return new String[]{username, password};
     }
     
     private void updateProfile() {
@@ -392,7 +777,6 @@ public class receptionist_dashboard extends JFrame {
     
     private void loadStudentData() {
         String currentDir = System.getProperty("user.dir");
-        // Create students.txt if it doesn't exist
         File file = new File(Paths.get(currentDir, DATA_DIR, "students.txt").toString());
         if (!file.exists()) {
             try {
@@ -408,39 +792,33 @@ public class receptionist_dashboard extends JFrame {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split(",");
-                if (parts.length >= 10) {  // Ensure we have at least 10 parts
-                    // Map the fields correctly based on the actual data structure
-                    // 1001,test123,060623,chenyao,0102154114,test123,Secondary 1,Geography Chemistry Economics,2025-07-01,Active
+                if (parts.length >= 9) {
+                    // Format: studentId,name,icPassport,email,contact,address,enrollmentDate,level,status
                     String studentId = parts[0].trim();
                     String name = parts[1].trim();
                     String icPassport = parts[2].trim();
                     String email = parts[3].trim();
                     String contact = parts[4].trim();
-                    // parts[5] is address
-                    String level = parts[6].trim();
-                    String subjects = parts[7].trim();
-                    if (parts.length > 8) {
-                        // If subjects contain commas, they might be split across multiple parts
-                        for (int i = 8; i < parts.length - 2; i++) {
-                            subjects += ", " + parts[i].trim();
-                        }
-                    }
-                    // The last two parts should be date and status
-                    String status = parts[parts.length - 1].trim();
+                    String address = parts[5].trim();
+                    String level = parts[7].trim();
+                    String status = parts[8].trim();
+                    
+                    // Load subjects for this student
+                    String subjects = loadStudentSubjects(studentId);
                     
                     tableModel.addRow(new Object[]{
-                        studentId, name, icPassport, email, contact, level, subjects, status
+                        studentId, name, icPassport, email, contact, address, level, subjects, status
                     });
                     
-                    // Update next student ID
+                    // Update next student number
                     try {
-                        int id = Integer.parseInt(studentId);
-                        if (id >= nextStudentId) {
-                            nextStudentId = id + 1;
+                        if (studentId.startsWith("S")) {
+                            int num = Integer.parseInt(studentId.substring(1));
+                            if (num >= nextStudentNumber) {
+                                nextStudentNumber = num + 1;
+                            }
                         }
                     } catch (NumberFormatException ignored) {}
-                } else {
-                    System.err.println("Invalid data format in line: " + line);
                 }
             }
         } catch (IOException e) {
@@ -449,6 +827,29 @@ public class receptionist_dashboard extends JFrame {
         
         // Refresh student dropdown after loading data
         refreshStudentCombo();
+    }
+    
+    private String loadStudentSubjects(String studentId) {
+        List<String> subjects = new ArrayList<>();
+        String currentDir = System.getProperty("user.dir");
+        
+        try (BufferedReader reader = new BufferedReader(new FileReader(Paths.get(currentDir, DATA_DIR, "student_subjects.txt").toString()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length >= 2 && parts[0].trim().equals(studentId)) {
+                    String subjectId = parts[1].trim();
+                    String subjectName = subjectMap.get(subjectId);
+                    if (subjectName != null) {
+                        subjects.add(subjectName);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error loading student subjects: " + e.getMessage());
+        }
+        
+        return String.join(", ", subjects);
     }
     
     private void loadProfile() {
@@ -469,20 +870,18 @@ public class receptionist_dashboard extends JFrame {
     
     private void updateStudentFile() {
         String currentDir = System.getProperty("user.dir");
-        // Simplified file update - writes all current table data back to file
         try (FileWriter writer = new FileWriter(Paths.get(currentDir, DATA_DIR, "students.txt").toString(), false)) {
             for (int i = 0; i < tableModel.getRowCount(); i++) {
-                // Format: studentId,name,icPassport,email,contact,address,level,subjects,date,status
+                // Format: studentId,name,icPassport,email,contact,address,enrollmentDate,level,status
                 String line = tableModel.getValueAt(i, 0) + "," +  // ID
                              tableModel.getValueAt(i, 1) + "," +   // Name
                              tableModel.getValueAt(i, 2) + "," +   // IC
                              tableModel.getValueAt(i, 3) + "," +   // Email
                              tableModel.getValueAt(i, 4) + "," +   // Contact
-                             "" + "," +                            // Address (simplified)
-                             tableModel.getValueAt(i, 5) + "," +   // Level
-                             tableModel.getValueAt(i, 6) + "," +   // Subjects
+                             tableModel.getValueAt(i, 5) + "," +   // Address
                              new SimpleDateFormat("yyyy-MM-dd").format(new Date()) + "," + // Date
-                             tableModel.getValueAt(i, 7) + "\n";   // Status
+                             tableModel.getValueAt(i, 6) + "," +   // Level
+                             tableModel.getValueAt(i, 8) + "\n";   // Status
                 writer.write(line);
             }
         } catch (IOException e) {
