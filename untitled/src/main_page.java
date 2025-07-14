@@ -1,15 +1,11 @@
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.nio.file.Paths;
-import java.nio.file.Files;
-import java.io.File;
-import java.io.FileWriter;
+import java.util.List;
+import java.util.Vector;
 
 public class main_page extends JFrame {
     private JPanel main;
@@ -22,7 +18,7 @@ public class main_page extends JFrame {
     private static final int MAX_LOGIN_ATTEMPTS = 3;
     
     // Define base directory for data files - using current directory
-    private static final String DATA_DIR = "data";
+    private static final String DATA_DIR = System.getProperty("user.dir") + "/untitled/data";
     
     private void initializeComponents() {
         main = new JPanel();
@@ -95,8 +91,40 @@ public class main_page extends JFrame {
             return;
         }
         
-        // Use admin_dashboard's authentication method
-        User user = admin_dashboard.authenticateUser(username, password);
+        // Read users from file
+        List<String> userLines = function.readUsers();
+        User user = null;
+        
+        for (String line : userLines) {
+            String[] parts = line.split(",");
+            if (parts.length >= 5) {
+                String id = parts[0].trim();
+                String storedUsername = parts[1].trim();
+                String storedPassword = parts[2].trim();
+                String role = parts[3].trim();
+                String name = parts[4].trim();
+                
+                if (storedUsername.equals(username) && storedPassword.equals(password)) {
+                    switch (role.toLowerCase()) {
+                        case "admin":
+                            user = new User(username, password, name, "", "", role, id) {};
+                            break;
+                        case "receptionist":
+                            user = new Receptionist(username, password, name, "", "", "");
+                            user.setStudentId(id);
+                            break;
+                        case "tutor":
+                            user = new Tutor(username, password, name, "", "");
+                            user.setStudentId(id);
+                            break;
+                        case "student":
+                            user = new User(username, password, name, "", "", role, id) {};
+                            break;
+                    }
+                    break;
+                }
+            }
+        }
         
         if (user != null) {
             // Reset login attempts on successful login
@@ -140,89 +168,58 @@ public class main_page extends JFrame {
     }
     
     private Tutor createTutorFromUser(User user) {
-        try {
-            // First get the tutor ID from users.txt based on login username
-            String tutorId = "";
-            String tutorName = "";
-            File usersFile = new File(DATA_DIR + "/users.txt");
-            if (usersFile.exists()) {
-                BufferedReader reader = new BufferedReader(new FileReader(usersFile));
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    String[] parts = line.split(",");
-                    // Match the login username (parts[1]) with user's username
-                    if (parts.length >= 5 && parts[1].equals(user.getUsername())) {
-                        tutorId = parts[0].trim();    // Get ID (e.g., T001)
-                        tutorName = parts[4].trim();  // Get Name (e.g., Yin Yin)
-                        break;
-                    }
-                }
-                reader.close();
+        String tutorId = user.getStudentId();
+        String tutorName = user.getName();
+        
+        // Read tutor details from tutors.txt
+        List<String> tutorLines = function.readTutors();
+        for (String line : tutorLines) {
+            String[] parts = line.split(",");
+            if (parts.length >= 6 && parts[0].trim().equals(tutorId)) {
+                // Create tutor with full details from tutors.txt
+                Tutor tutor = new Tutor(
+                    user.getUsername(),
+                    user.getPassword(),
+                    tutorName,
+                    parts[3].trim(),  // email
+                    parts[4].trim()   // contact
+                );
+                tutor.setStudentId(tutorId);
+                // Load additional tutor data
+                loadTutorData(tutor);
+                return tutor;
             }
-
-            // Now read from tutors.txt to get full tutor details using the tutor ID
-            File tutorsFile = new File(DATA_DIR + "/tutors.txt");
-            if (tutorsFile.exists() && !tutorId.isEmpty()) {
-                BufferedReader reader = new BufferedReader(new FileReader(tutorsFile));
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    String[] parts = line.split(",");
-                    if (parts.length >= 6 && parts[0].trim().equals(tutorId)) {
-                        // Create tutor with full details from tutors.txt
-                        Tutor tutor = new Tutor(
-                            tutorId,  // ID from users.txt
-                            user.getPassword(),
-                            tutorName,  // Name from users.txt
-                            parts[3].trim(),  // email
-                            parts[4].trim()   // contact
-                        );
-                        // Load additional tutor-specific data
-                        loadTutorData(tutor);
-                        reader.close();
-                        return tutor;
-                    }
-                }
-                reader.close();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
 
         // Fallback to basic user info if tutor record not found
-        return new Tutor(
+        Tutor tutor = new Tutor(
             user.getUsername(),
             user.getPassword(),
             user.getName(),
             user.getEmail() != null ? user.getEmail() : "",
             user.getContactNumber() != null ? user.getContactNumber() : ""
         );
+        tutor.setStudentId(tutorId);
+        loadTutorData(tutor);
+        return tutor;
     }
     
     private void loadTutorData(Tutor tutor) {
-        try {
-            // Load subjects and levels from a tutor data file if it exists
-            File tutorFile = new File(DATA_DIR + "/tutor_data.txt");
-            if (tutorFile.exists()) {
-                BufferedReader reader = new BufferedReader(new FileReader(tutorFile));
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    String[] parts = line.split(",");
-                    if (parts.length >= 3 && parts[0].trim().equals(tutor.getUsername())) {
-                        // Format: username,subject,level
-                        tutor.addSubject(parts[1].trim());
-                        tutor.addLevel(parts[2].trim());
-                    }
-                }
-                reader.close();
-            } else {
-                // Add default subjects and levels if no data file exists
-                tutor.addSubject("Mathematics");
-                tutor.addSubject("Science");
-                tutor.addLevel("Form 1");
-                tutor.addLevel("Form 2");
+        // Load subjects and levels from subject.txt
+        List<String> subjectLines = function.readSubjects();
+        boolean hasSubjects = false;
+        
+        for (String line : subjectLines) {
+            String[] parts = line.split(",");
+            if (parts.length >= 4 && parts[3].trim().equals(tutor.getStudentId())) {
+                tutor.addSubject(parts[1].trim()); // Subject name
+                tutor.addLevel(parts[2].trim());   // Level
+                hasSubjects = true;
             }
-        } catch (IOException e) {
-            // If there's an error loading data, add default subjects and levels
+        }
+        
+        // Add default subjects and levels if none found
+        if (!hasSubjects) {
             tutor.addSubject("Mathematics");
             tutor.addSubject("Science");
             tutor.addLevel("Form 1");
@@ -237,8 +234,7 @@ public class main_page extends JFrame {
         // Open appropriate dashboard based on user role
         switch (user.getRole()) {
             case "admin":
-                System.out.println("Opening Tutor dashboard for " + user.getName());
-//                new admin_dashboard(user.getName()).setVisible(true);
+               new admin_dashboard(user.getName()).setVisible(true);
                 break;
             case "receptionist":
                 new receptionist_dashboard(user.getName()).setVisible(true);
@@ -262,47 +258,21 @@ public class main_page extends JFrame {
     
     // Method to ensure data directory and user file exist
     private void ensureDataFilesExist() {
-        try {
-            // Get current directory path
-            String currentDir = System.getProperty("user.dir");
-            
-            // Create data directory if it doesn't exist
-            File dataDir = new File(Paths.get(currentDir, DATA_DIR).toString());
-            if (!dataDir.exists()) {
-                dataDir.mkdir();
-                System.out.println("Created data directory at: " + dataDir.getAbsolutePath());
-            }
-            
-            // Create users.txt if it doesn't exist
-            File usersFile = new File(Paths.get(currentDir, DATA_DIR, "users.txt").toString());
-            if (!usersFile.exists()) {
-                try (FileWriter writer = new FileWriter(usersFile)) {
-                    // Add default users with format: username,password,role,name,student_id
-                    writer.write("admin,admin123,admin,Elson,\n");
-                    writer.write("receptionist,recep123,receptionist,ChenYao,\n");
-                    writer.write("tutor,tutor123,tutor,Yin Yin,\n");
-                    writer.write("student,student123,student,Javion,\n");
-                    System.out.println("Created users.txt at: " + usersFile.getAbsolutePath());
-                }
-            }
-            
-            // Create students.txt if it doesn't exist
-            File studentsFile = new File(Paths.get(currentDir, DATA_DIR, "students.txt").toString());
-            if (!studentsFile.exists()) {
-                studentsFile.createNewFile();
-                System.out.println("Created students.txt at: " + studentsFile.getAbsolutePath());
-            }
-            
-            // Create payments.txt if it doesn't exist
-            File paymentsFile = new File(Paths.get(currentDir, DATA_DIR, "payments.txt").toString());
-            if (!paymentsFile.exists()) {
-                paymentsFile.createNewFile();
-                System.out.println("Created payments.txt at: " + paymentsFile.getAbsolutePath());
-            }
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "Error creating data files: " + e.getMessage(),
-                                        "Error", JOptionPane.ERROR_MESSAGE);
+        // Check if users.txt exists
+        if (!function.fileExists("users.txt")) {
+            // Add default users
+            function.addUser("A001,admin,admin123,admin,Elson");
+            function.addUser("R001,receptionist,recep123,receptionist,ChenYao");
+            function.addUser("T001,tutor,tutor123,tutor,Yin Yin");
+            function.addUser("S001,student,student123,student,Javion");
+            System.out.println("Created default users in users.txt");
         }
+
+        // Create other required files
+        function.createFileIfNotExists("students.txt");
+        function.createFileIfNotExists("payments.txt");
+        function.createFileIfNotExists("subject.txt");
+        function.createFileIfNotExists("tutors.txt");
     }
     
     public static void main(String[] args) {
