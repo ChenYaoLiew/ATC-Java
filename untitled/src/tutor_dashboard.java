@@ -1,5 +1,6 @@
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
@@ -340,9 +341,9 @@ public class tutor_dashboard extends JFrame {
         scheduleTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
         scheduleTitle.setForeground(new Color(0x343A40));
 
-        // Initialize schedule table
+        // Initialize schedule table with updated columns
         DefaultTableModel scheduleTableModel = new DefaultTableModel(
-            new String[]{"Schedule ID", "Class ID", "Day", "Start Time", "End Time", "Room"}, 0
+            new String[]{"Subject", "Level", "Day", "Start Time", "End Time", "Room", "Namelist"}, 0
         ) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -353,12 +354,44 @@ public class tutor_dashboard extends JFrame {
         styleTable(scheduleTable);
 
         // Set preferred column widths
-        scheduleTable.getColumnModel().getColumn(0).setPreferredWidth(100); // Schedule ID
-        scheduleTable.getColumnModel().getColumn(1).setPreferredWidth(100); // Class ID
+        scheduleTable.getColumnModel().getColumn(0).setPreferredWidth(150); // Subject
+        scheduleTable.getColumnModel().getColumn(1).setPreferredWidth(100); // Level
         scheduleTable.getColumnModel().getColumn(2).setPreferredWidth(100); // Day
         scheduleTable.getColumnModel().getColumn(3).setPreferredWidth(100); // Start Time
         scheduleTable.getColumnModel().getColumn(4).setPreferredWidth(100); // End Time
         scheduleTable.getColumnModel().getColumn(5).setPreferredWidth(100); // Room
+        scheduleTable.getColumnModel().getColumn(6).setPreferredWidth(120); // Namelist button
+
+        // Add button renderer for the Namelist column
+        scheduleTable.getColumnModel().getColumn(6).setCellRenderer(new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                    boolean isSelected, boolean hasFocus, int row, int column) {
+                JButton button = new JButton(value != null ? value.toString() : "");
+                button.setBackground(new Color(40, 167, 69)); // Green color
+                button.setForeground(Color.WHITE);
+                button.setFont(new Font("Segoe UI", Font.BOLD, 12));
+                button.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
+                button.setFocusPainted(false);
+                return button;
+            }
+        });
+
+        // Add mouse listener for button clicks
+        scheduleTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int column = scheduleTable.getColumnModel().getColumnIndexAtX(e.getX());
+                int row = e.getY() / scheduleTable.getRowHeight();
+                
+                if (row < scheduleTable.getRowCount() && row >= 0 && 
+                    column == 6 && e.getClickCount() == 1) {
+                    String subject = (String) scheduleTable.getValueAt(row, 0);
+                    String level = (String) scheduleTable.getValueAt(row, 1);
+                    showStudentsDialog(subject, level);
+                }
+            }
+        });
 
         JScrollPane scheduleScrollPane = new JScrollPane(scheduleTable);
         scheduleScrollPane.setBorder(BorderFactory.createEmptyBorder());
@@ -382,11 +415,137 @@ public class tutor_dashboard extends JFrame {
         return panel;
     }
 
+    private void showStudentsDialog(String subject, String level) {
+        // Create dialog
+        JDialog dialog = new JDialog(this, "Students in " + subject + " (" + level + ")", true);
+        dialog.setLayout(new BorderLayout(10, 10));
+        dialog.setBackground(new Color(0xF8F9FA));
+
+        // Create table model for students
+        DefaultTableModel studentsModel = new DefaultTableModel(
+            new String[]{"Student ID", "Name", "Level"}, 0
+        ) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        JTable studentsTable = new JTable(studentsModel);
+        styleTable(studentsTable);
+
+        // Create header panel with title and total count
+        JPanel headerPanel = new JPanel(new BorderLayout(10, 0));
+        headerPanel.setBackground(new Color(0xF8F9FA));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Add title
+        JLabel titleLabel = new JLabel("👥 Student Namelist");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        headerPanel.add(titleLabel, BorderLayout.WEST);
+
+        // Add total count label (will be updated after loading data)
+        JLabel totalCountLabel = new JLabel("");
+        totalCountLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        totalCountLabel.setForeground(new Color(40, 167, 69)); // Match the button color
+        headerPanel.add(totalCountLabel, BorderLayout.EAST);
+
+        try {
+            // First get the subject ID for the given subject name and level
+            String subjectId = "";
+            File subjectsFile = new File(DATA_DIR + "/subject.txt");
+            if (subjectsFile.exists()) {
+                BufferedReader reader = new BufferedReader(new FileReader(subjectsFile));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    String[] parts = line.split(",");
+                    if (parts.length >= 3 && parts[1].trim().equals(subject) && parts[2].trim().equals(level)) {
+                        subjectId = parts[0].trim();
+                        break;
+                    }
+                }
+                reader.close();
+            }
+
+            if (!subjectId.isEmpty()) {
+                // Get all student IDs enrolled in this subject
+                Set<String> enrolledStudentIds = new HashSet<>();
+                File studentSubjectsFile = new File(DATA_DIR + "/student_subjects.txt");
+                if (studentSubjectsFile.exists()) {
+                    BufferedReader reader = new BufferedReader(new FileReader(studentSubjectsFile));
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        String[] parts = line.split(",");
+                        if (parts.length >= 2 && parts[1].trim().equals(subjectId)) {
+                            enrolledStudentIds.add(parts[0].trim());
+                        }
+                    }
+                    reader.close();
+                }
+
+                // Get student details and add to table
+                File studentsFile = new File(DATA_DIR + "/students.txt");
+                if (studentsFile.exists()) {
+                    BufferedReader reader = new BufferedReader(new FileReader(studentsFile));
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        String[] parts = line.split(",");
+                        if (parts.length >= 8 && enrolledStudentIds.contains(parts[0].trim())) {
+                            Vector<String> row = new Vector<>();
+                            row.add(parts[0].trim()); // Student ID
+                            row.add(parts[1].trim()); // Name
+                            row.add(parts[7].trim()); // Level
+                            studentsModel.addRow(row);
+                        }
+                    }
+                    reader.close();
+                }
+
+                // Update total count label
+                totalCountLabel.setText("Total Students: " + studentsModel.getRowCount());
+            }
+        } catch (IOException e) {
+            showError("Error", "Failed to load student data: " + e.getMessage());
+        }
+
+        // Add close button
+        JButton closeButton = new JButton("Close");
+        closeButton.setBackground(new Color(0, 123, 255));
+        closeButton.setForeground(Color.WHITE);
+        closeButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        closeButton.addActionListener(e -> dialog.dispose());
+
+        // Layout
+        dialog.add(headerPanel, BorderLayout.NORTH);
+        dialog.add(new JScrollPane(studentsTable), BorderLayout.CENTER);
+        dialog.add(closeButton, BorderLayout.SOUTH);
+
+        // Set size and location
+        dialog.setSize(500, 400);
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }
+
     private void loadScheduleData(DefaultTableModel scheduleTableModel) {
         scheduleTableModel.setRowCount(0);
         try {
-            // First, get all class IDs for the current tutor
-            Set<String> tutorClassIds = new HashSet<>();
+            // First, load subjects data into a map for quick lookup
+            Map<String, String[]> subjectMap = new HashMap<>();
+            File subjectsFile = new File(DATA_DIR + "/subject.txt");
+            if (subjectsFile.exists()) {
+                BufferedReader reader = new BufferedReader(new FileReader(subjectsFile));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    String[] parts = line.split(",");
+                    if (parts.length >= 3) {
+                        // Store subject name and level for each subject ID
+                        subjectMap.put(parts[0].trim(), new String[]{parts[1].trim(), parts[2].trim()});
+                    }
+                }
+                reader.close();
+            }
+
+            // Get all class IDs for the current tutor and map them to subject IDs
+            Map<String, String> classToSubjectMap = new HashMap<>();
             File classesFile = new File(DATA_DIR + "/classes.txt");
             if (classesFile.exists()) {
                 BufferedReader reader = new BufferedReader(new FileReader(classesFile));
@@ -394,28 +553,49 @@ public class tutor_dashboard extends JFrame {
                 while ((line = reader.readLine()) != null) {
                     String[] parts = line.split(",");
                     if (parts.length >= 3 && parts[2].trim().equals(currentTutor.getUsername())) {
-                        tutorClassIds.add(parts[0].trim());
+                        classToSubjectMap.put(parts[0].trim(), parts[1].trim());
                     }
                 }
                 reader.close();
             }
 
-            // Now load schedule data for the tutor's classes
+            // Now load schedule data and join with subjects info
             File scheduleFile = new File(DATA_DIR + "/schedule.txt");
             if (scheduleFile.exists()) {
                 BufferedReader reader = new BufferedReader(new FileReader(scheduleFile));
                 String line;
                 while ((line = reader.readLine()) != null) {
                     String[] parts = line.split(",");
-                    if (parts.length >= 6 && tutorClassIds.contains(parts[1].trim())) {
-                        Vector<String> row = new Vector<>();
-                        row.add(parts[0].trim()); // Schedule ID
-                        row.add(parts[1].trim()); // Class ID
-                        row.add(parts[2].trim()); // Day
-                        row.add(parts[3].trim()); // Start Time
-                        row.add(parts[4].trim()); // End Time
-                        row.add(parts[5].trim()); // Room
-                        scheduleTableModel.addRow(row);
+                    if (parts.length >= 6) {
+                        String classId = parts[1].trim();
+                        String subjectId = classToSubjectMap.get(classId);
+                        
+                        if (subjectId != null) {
+                            String[] subjectInfo = subjectMap.get(subjectId);
+                            if (subjectInfo != null) {
+                                // Count students for this subject
+                                int studentCount = 0;
+                                BufferedReader studentReader = new BufferedReader(new FileReader(DATA_DIR + "/student_subjects.txt"));
+                                String studentLine;
+                                while ((studentLine = studentReader.readLine()) != null) {
+                                    String[] studentParts = studentLine.split(",");
+                                    if (studentParts.length >= 2 && studentParts[1].trim().equals(subjectId)) {
+                                        studentCount++;
+                                    }
+                                }
+                                studentReader.close();
+
+                                Vector<String> row = new Vector<>();
+                                row.add(subjectInfo[0]); // Subject name
+                                row.add(subjectInfo[1]); // Level
+                                row.add(parts[2].trim()); // Day
+                                row.add(parts[3].trim()); // Start Time
+                                row.add(parts[4].trim()); // End Time
+                                row.add(parts[5].trim()); // Room
+                                row.add("👥 Namelist (" + studentCount + ")"); // Namelist button
+                                scheduleTableModel.addRow(row);
+                            }
+                        }
                     }
                 }
                 reader.close();
