@@ -1,0 +1,2 @@
+T001,Yin Yin,901223145678,yinyin@email.com,+60123456789,123 Jalan Bukit Bintang KL,Active
+T002,David Smith,A12345678,david.smith@email.com,+60187654321,45 Jalan Ampang KL,Active

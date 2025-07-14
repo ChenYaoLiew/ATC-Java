@@ -11,7 +11,7 @@ import java.nio.file.Files;
 import java.io.File;
 import java.io.FileWriter;
 
-public class main_page extends JFrame {
+public class MainPage extends JFrame {
     private JPanel main;
     private JTextField username_field;
     private JPasswordField password_field;
@@ -24,38 +24,7 @@ public class main_page extends JFrame {
     // Define base directory for data files - using current directory
     private static final String DATA_DIR = "data";
     
-    private void initializeComponents() {
-        main = new JPanel();
-        main.setLayout(new java.awt.GridBagLayout());
-        
-        java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
-        gbc.insets = new java.awt.Insets(10, 10, 10, 10);
-        
-        // Username label and field
-        gbc.gridx = 0; gbc.gridy = 0;
-        main.add(new JLabel("Username:"), gbc);
-        
-        gbc.gridx = 1;
-        username_field = new JTextField(15);
-        main.add(username_field, gbc);
-        
-        // Password label and field
-        gbc.gridx = 0; gbc.gridy = 1;
-        main.add(new JLabel("Password:"), gbc);
-        
-        gbc.gridx = 1;
-        password_field = new JPasswordField(15);
-        main.add(password_field, gbc);
-        
-        // Login button
-        gbc.gridx = 1; gbc.gridy = 2;
-        gbc.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        loginButton = new JButton("Login");
-        main.add(loginButton, gbc);
-    }
-    
-    public main_page() {
-        initializeComponents();
+    public MainPage() {
         setContentPane(main);
         setTitle("Tuition Center Management System - Login");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -139,97 +108,6 @@ public class main_page extends JFrame {
         return loginAttempts.getOrDefault(username, 0) >= MAX_LOGIN_ATTEMPTS;
     }
     
-    private Tutor createTutorFromUser(User user) {
-        try {
-            // First get the tutor ID from users.txt based on login username
-            String tutorId = "";
-            String tutorName = "";
-            File usersFile = new File(DATA_DIR + "/users.txt");
-            if (usersFile.exists()) {
-                BufferedReader reader = new BufferedReader(new FileReader(usersFile));
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    String[] parts = line.split(",");
-                    // Match the login username (parts[1]) with user's username
-                    if (parts.length >= 5 && parts[1].equals(user.getUsername())) {
-                        tutorId = parts[0].trim();    // Get ID (e.g., T001)
-                        tutorName = parts[4].trim();  // Get Name (e.g., Yin Yin)
-                        break;
-                    }
-                }
-                reader.close();
-            }
-
-            // Now read from tutors.txt to get full tutor details using the tutor ID
-            File tutorsFile = new File(DATA_DIR + "/tutors.txt");
-            if (tutorsFile.exists() && !tutorId.isEmpty()) {
-                BufferedReader reader = new BufferedReader(new FileReader(tutorsFile));
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    String[] parts = line.split(",");
-                    if (parts.length >= 6 && parts[0].trim().equals(tutorId)) {
-                        // Create tutor with full details from tutors.txt
-                        Tutor tutor = new Tutor(
-                            tutorId,  // ID from users.txt
-                            user.getPassword(),
-                            tutorName,  // Name from users.txt
-                            parts[3].trim(),  // email
-                            parts[4].trim()   // contact
-                        );
-                        // Load additional tutor-specific data
-                        loadTutorData(tutor);
-                        reader.close();
-                        return tutor;
-                    }
-                }
-                reader.close();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        // Fallback to basic user info if tutor record not found
-        return new Tutor(
-            user.getUsername(),
-            user.getPassword(),
-            user.getName(),
-            user.getEmail() != null ? user.getEmail() : "",
-            user.getContactNumber() != null ? user.getContactNumber() : ""
-        );
-    }
-    
-    private void loadTutorData(Tutor tutor) {
-        try {
-            // Load subjects and levels from a tutor data file if it exists
-            File tutorFile = new File(DATA_DIR + "/tutor_data.txt");
-            if (tutorFile.exists()) {
-                BufferedReader reader = new BufferedReader(new FileReader(tutorFile));
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    String[] parts = line.split(",");
-                    if (parts.length >= 3 && parts[0].trim().equals(tutor.getUsername())) {
-                        // Format: username,subject,level
-                        tutor.addSubject(parts[1].trim());
-                        tutor.addLevel(parts[2].trim());
-                    }
-                }
-                reader.close();
-            } else {
-                // Add default subjects and levels if no data file exists
-                tutor.addSubject("Mathematics");
-                tutor.addSubject("Science");
-                tutor.addLevel("Form 1");
-                tutor.addLevel("Form 2");
-            }
-        } catch (IOException e) {
-            // If there's an error loading data, add default subjects and levels
-            tutor.addSubject("Mathematics");
-            tutor.addSubject("Science");
-            tutor.addLevel("Form 1");
-            tutor.addLevel("Form 2");
-        }
-    }
-    
     private void openDashboard(User user) {
         // Hide the login window
         this.setVisible(false);
@@ -243,20 +121,17 @@ public class main_page extends JFrame {
                 new receptionist_dashboard(user.getName()).setVisible(true);
                 break;
             case "tutor":
-                Tutor tutor = createTutorFromUser(user);
-                new tutor_dashboard(tutor).setVisible(true);
+                // TODO: Open Tutor dashboard
+                System.out.println("Opening Tutor dashboard for " + user.getName());
+                // new TutorDashboard(user.getName()).setVisible(true);
                 break;
             case "student":
                 new student_dashboard(user.getUsername()).setVisible(true);
                 break;
             default:
-                JOptionPane.showMessageDialog(this, 
-                    "Invalid user role", "Error", JOptionPane.ERROR_MESSAGE);
-                this.setVisible(true);
+                JOptionPane.showMessageDialog(this, "Unknown user role: " + user.getRole(), 
+                                            "Error", JOptionPane.ERROR_MESSAGE);
         }
-        
-        // Dispose of the login window
-        this.dispose();
     }
     
     // Method to ensure data directory and user file exist
@@ -308,7 +183,7 @@ public class main_page extends JFrame {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                new main_page().setVisible(true);
+                new MainPage().setVisible(true);
             }
         });
     }
