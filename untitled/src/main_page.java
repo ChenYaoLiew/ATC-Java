@@ -250,9 +250,13 @@ public class main_page extends JFrame {
                 new student_dashboard(user.getUsername()).setVisible(true);
                 break;
             default:
-                JOptionPane.showMessageDialog(this, "Unknown user role: " + user.getRole(), 
-                                            "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, 
+                    "Invalid user role", "Error", JOptionPane.ERROR_MESSAGE);
+                this.setVisible(true);
         }
+        
+        // Dispose of the login window
+        this.dispose();
     }
     
     // Method to ensure data directory and user file exist
