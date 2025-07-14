@@ -49,54 +49,99 @@ public class receptionist_dashboard extends JFrame {
     private JButton updateProfileButton;
     
     private String currentUser;
-    private static int nextStudentNumber = 1; // For generating S001, S002, etc.
-    private static int nextPaymentNumber = 1; // For generating PAY001, PAY002, etc.
-    private Map<String, String> subjectMap = new HashMap<>(); // subjectId -> subjectName
-    private Map<String, String> levelSubjectMap = new HashMap<>(); // subjectId -> level
-    private Random random = new Random(); // For generating random credentials
+    private static int nextStudentNumber = 1;
+    private static int nextPaymentNumber = 1;
+    private Map<String, String> subjectMap = new HashMap<>();
+    private Map<String, String> levelSubjectMap = new HashMap<>();
+    private Random random = new Random();
     
-    // Define base directory for data files
     private static final String DATA_DIR = "data";
     
-    public receptionist_dashboard(String userName) {
+        public receptionist_dashboard(String userName) {
         this.currentUser = userName;
         
         setContentPane(mainPanel);
         setTitle("Receptionist Dashboard - " + userName);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(900, 700);
+        setSize(1200, 800);
         setLocationRelativeTo(null);
         
         welcomeLabel.setText("Welcome, " + userName + " (Receptionist)");
         
-        loadSubjects(); // Load subjects first
+        loadSubjects();
         initializeComponents();
+        applyModernStyling();
         setupEventListeners();
         loadStudentData();
         loadProfile();
         updateNextPaymentNumber();
     }
     
-    private void loadSubjects() {
-        subjectMap.clear();
-        levelSubjectMap.clear();
+    private void applyModernStyling() {
+        // Apply modern styling to existing form components
         
-        String currentDir = System.getProperty("user.dir");
-        try (BufferedReader reader = new BufferedReader(new FileReader(Paths.get(currentDir, DATA_DIR, "subject.txt").toString()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split(",");
-                if (parts.length >= 3) {
-                    String subjectId = parts[0].trim();
-                    String subjectName = parts[1].trim();
-                    String level = parts[2].trim();
-                    
-                    subjectMap.put(subjectId, subjectName);
-                    levelSubjectMap.put(subjectId, level);
-                }
-            }
-        } catch (IOException e) {
-            System.err.println("Error loading subjects: " + e.getMessage());
+        // Style main panel
+        mainPanel.setBackground(new Color(0xF8F9FA));
+        
+        // Style welcome label
+        welcomeLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        welcomeLabel.setForeground(Color.WHITE);
+        
+        // Style logout button
+        logoutButton.setBackground(new Color(220, 53, 69));
+        logoutButton.setForeground(Color.WHITE);
+        logoutButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        logoutButton.setBorder(BorderFactory.createEmptyBorder(12, 24, 12, 24));
+        logoutButton.setFocusPainted(false);
+        logoutButton.setOpaque(true);
+        logoutButton.setBorderPainted(false);
+        
+        // Style tabbed pane
+        tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        tabbedPane.setBackground(new Color(0xF8F9FA));
+        
+        // Style text fields
+        styleTextField(studentNameField);
+        styleTextField(icPassportField);
+        styleTextField(emailField);
+        styleTextField(contactField);
+        styleTextField(paymentAmountField);
+        styleTextField(profileNameField);
+        styleTextField(profileContactField);
+        
+        // Style text areas
+        styleTextArea(addressArea);
+        styleTextArea(receiptArea);
+        receiptArea.setEditable(false);
+        receiptArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        
+        // Style combo boxes
+        styleComboBox(levelCombo);
+        styleComboBox(paymentStudentCombo);
+        styleComboBox(paymentMethodCombo);
+        
+        // Style list
+        styleList(subjectsList);
+        
+        // Style buttons
+        styleButton(registerStudentButton, new Color(40, 167, 69)); // Green
+        styleButton(updateEnrollmentButton, new Color(0, 123, 255)); // Blue
+        styleButton(deleteStudentButton, new Color(220, 53, 69)); // Red
+        styleButton(acceptPaymentButton, new Color(40, 167, 69)); // Green
+        styleButton(generateReceiptButton, new Color(0, 123, 255)); // Blue
+        styleButton(updateProfileButton, new Color(0, 123, 255)); // Blue
+        
+        // Style table
+        if (studentsTable != null) {
+            studentsTable.setRowHeight(35);
+            studentsTable.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            studentsTable.getTableHeader().setBackground(new Color(0x007BFF));
+            studentsTable.getTableHeader().setForeground(Color.WHITE);
+            studentsTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
+            studentsTable.setShowGrid(true);
+            studentsTable.setGridColor(new Color(0xDEE2E6));
+            studentsTable.setSelectionBackground(new Color(0xE7F3FF));
+            studentsTable.setBackground(Color.WHITE);
         }
     }
     
@@ -131,22 +176,6 @@ public class receptionist_dashboard extends JFrame {
         refreshStudentCombo();
     }
     
-    private void updateSubjectsList() {
-        String selectedLevel = (String) levelCombo.getSelectedItem();
-        List<String> availableSubjects = new ArrayList<>();
-        
-        for (Map.Entry<String, String> entry : levelSubjectMap.entrySet()) {
-            if (entry.getValue().equals(selectedLevel)) {
-                String subjectId = entry.getKey();
-                String subjectName = subjectMap.get(subjectId);
-                availableSubjects.add(subjectName + " (" + subjectId + ")");
-            }
-        }
-        
-        subjectsList.setListData(availableSubjects.toArray(new String[0]));
-        subjectsList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-    }
-    
     private void setupEventListeners() {
         // Logout button
         logoutButton.addActionListener(e -> logout());
@@ -168,6 +197,90 @@ public class receptionist_dashboard extends JFrame {
         
         // Update Profile button
         updateProfileButton.addActionListener(e -> updateProfile());
+    }
+    
+    
+    
+    private void styleTextField(JTextField field) {
+        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        field.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(0xDEE2E6)),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+        field.setBackground(Color.WHITE);
+    }
+    
+    private void styleTextArea(JTextArea area) {
+        area.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
+        area.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(0xDEE2E6)),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+        area.setBackground(Color.WHITE);
+    }
+    
+    private void styleComboBox(JComboBox<?> combo) {
+        combo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        combo.setBorder(BorderFactory.createLineBorder(new Color(0xDEE2E6)));
+        combo.setBackground(Color.WHITE);
+    }
+    
+    private void styleList(JList<?> list) {
+        list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        list.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        list.setSelectionBackground(new Color(0xE7F3FF));
+        list.setBackground(Color.WHITE);
+        list.setBorder(BorderFactory.createLineBorder(new Color(0xDEE2E6)));
+    }
+    
+    private void styleButton(JButton button, Color backgroundColor) {
+        button.setBackground(backgroundColor);
+        button.setForeground(Color.WHITE);
+        button.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        button.setBorder(BorderFactory.createEmptyBorder(12, 24, 12, 24));
+        button.setFocusPainted(false);
+        button.setOpaque(true);
+        button.setBorderPainted(false);
+    }
+    
+    private void loadSubjects() {
+        subjectMap.clear();
+        levelSubjectMap.clear();
+        
+        String currentDir = System.getProperty("user.dir");
+        try (BufferedReader reader = new BufferedReader(new FileReader(Paths.get(currentDir, DATA_DIR, "subject.txt").toString()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length >= 3) {
+                    String subjectId = parts[0].trim();
+                    String subjectName = parts[1].trim();
+                    String level = parts[2].trim();
+                    
+                    subjectMap.put(subjectId, subjectName);
+                    levelSubjectMap.put(subjectId, level);
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error loading subjects: " + e.getMessage());
+        }
+    }
+    
+    private void updateSubjectsList() {
+        String selectedLevel = (String) levelCombo.getSelectedItem();
+        List<String> availableSubjects = new ArrayList<>();
+        
+        for (Map.Entry<String, String> entry : levelSubjectMap.entrySet()) {
+            if (entry.getValue().equals(selectedLevel)) {
+                String subjectId = entry.getKey();
+                String subjectName = subjectMap.get(subjectId);
+                availableSubjects.add(subjectName + " (" + subjectId + ")");
+            }
+        }
+        
+        subjectsList.setListData(availableSubjects.toArray(new String[0]));
     }
     
     private void registerStudent() {
