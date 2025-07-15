@@ -51,7 +51,7 @@ public class receptionist_dashboard extends JFrame {
     private Map<String, String> levelSubjectMap = new HashMap<>();
     private Random random = new Random();
     
-        public receptionist_dashboard(String userName) {
+    public receptionist_dashboard(String userName) {
         this.currentUser = userName;
         
         setContentPane(mainPanel);
@@ -63,10 +63,14 @@ public class receptionist_dashboard extends JFrame {
         welcomeLabel.setText("Welcome, " + userName + " (Receptionist)");
         
         loadSubjects();
+        
         initializeComponents();
+        
         applyModernStyling();
         setupEventListeners();
+        
         loadStudentData();
+        
         loadProfile();
         updateNextPaymentNumber();
     }
@@ -244,8 +248,10 @@ public class receptionist_dashboard extends JFrame {
         levelSubjectMap.clear();
         
         List<String> subjectLines = function.readSubjects();
+        
         for (String line : subjectLines) {
             String[] parts = line.split(",");
+            
             if (parts.length >= 3) {
                 String subjectId = parts[0].trim();
                 String subjectName = parts[1].trim();
@@ -259,13 +265,18 @@ public class receptionist_dashboard extends JFrame {
     
     private void updateSubjectsList() {
         String selectedLevel = (String) levelCombo.getSelectedItem();
+        
         List<String> availableSubjects = new ArrayList<>();
         
         for (Map.Entry<String, String> entry : levelSubjectMap.entrySet()) {
             if (entry.getValue().equals(selectedLevel)) {
                 String subjectId = entry.getKey();
                 String subjectName = subjectMap.get(subjectId);
-                availableSubjects.add(subjectName + " (" + subjectId + ")");
+                
+                if (subjectName != null) {
+                    String display = subjectName + " (" + subjectId + ")";
+                    availableSubjects.add(display);
+                }
             }
         }
         
@@ -286,6 +297,7 @@ public class receptionist_dashboard extends JFrame {
         
         // Check subject selection (max 3)
         List<String> selectedSubjects = subjectsList.getSelectedValuesList();
+        
         if (selectedSubjects.isEmpty() || selectedSubjects.size() > 3) {
             JOptionPane.showMessageDialog(this, "Please select 1-3 subjects only.", 
                                         "Error", JOptionPane.ERROR_MESSAGE);
@@ -294,6 +306,7 @@ public class receptionist_dashboard extends JFrame {
         
         // Generate new student ID
         String studentId = generateNextStudentId();
+        
         String name = studentNameField.getText().trim();
         String icPassport = icPassportField.getText().trim();
         String email = emailField.getText().trim();
@@ -345,6 +358,7 @@ public class receptionist_dashboard extends JFrame {
         for (String subjectDisplay : selectedSubjects) {
             // Extract subject ID from display string like "Math (SUB001)"
             String subjectId = extractSubjectId(subjectDisplay);
+            
             if (!subjectId.isEmpty()) {
                 String studentSubjectData = studentId + "," + subjectId;
                 function.addStudentSubject(studentSubjectData);
@@ -684,6 +698,7 @@ public class receptionist_dashboard extends JFrame {
         
         // Format: userId,username,password,role,name
         String userData = studentId + "," + username + "," + password + "," + role + "," + studentName;
+        
         function.addUser(userData);
         
         // Return the generated credentials
@@ -711,8 +726,10 @@ public class receptionist_dashboard extends JFrame {
         
         // Load existing student data
         List<String> studentLines = function.readStudents();
+        
         for (String line : studentLines) {
             String[] parts = line.split(",");
+            
             if (parts.length >= 9) {
                 // Format: studentId,name,icPassport,email,contact,address,enrollmentDate,level,status
                 String studentId = parts[0].trim();
@@ -741,11 +758,13 @@ public class receptionist_dashboard extends JFrame {
         List<String> subjects = new ArrayList<>();
         
         List<String> studentSubjectLines = function.readStudentSubjects();
+        
         for (String line : studentSubjectLines) {
             String[] parts = line.split(",");
             if (parts.length >= 2 && parts[0].trim().equals(studentId)) {
                 String subjectId = parts[1].trim();
                 String subjectName = subjectMap.get(subjectId);
+                
                 if (subjectName != null) {
                     subjects.add(subjectName);
                 }
