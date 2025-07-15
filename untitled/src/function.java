@@ -9,7 +9,7 @@ public class function {
     static {
         // Get current working directory and build cross-platform path
         String userDir = System.getProperty("user.dir");
-        DATA_PATH = userDir + File.separator + "untitled" + File.separator + "data" + File.separator;
+        DATA_PATH = userDir + File.separator + "data" + File.separator;
         
         // Ensure data directory exists
         ensureDataDirectoryExists();
@@ -88,6 +88,7 @@ public class function {
     private static boolean deleteLine(String fileName, String lineToDelete) {
         List<String> lines = readFile(fileName);
         boolean found = lines.remove(lineToDelete);
+        
         if (found) {
             return writeFile(fileName, lines);
         }
@@ -366,7 +367,6 @@ public class function {
         
         // Format the number part with leading zeros
         String numberPart = String.format("%0" + (idLength - prefix.length()) + "d", newNumber);
-        
         return prefix + numberPart;
     }
 
