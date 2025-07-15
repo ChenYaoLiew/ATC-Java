@@ -19,7 +19,7 @@ public class main_page extends JFrame {
     
     // Define base directory for data files - using current directory
     private static final String DATA_DIR = System.getProperty("user.dir") + "/untitled/data";
-    
+
     private void initializeComponents() {
         main = new JPanel();
         main.setLayout(new java.awt.GridBagLayout());

@@ -1,5 +1,3 @@
-import java.io.*;
-import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -49,13 +47,9 @@ public class receptionist_dashboard extends JFrame {
     private JButton updateProfileButton;
     
     private String currentUser;
-    private static int nextStudentNumber = 1;
-    private static int nextPaymentNumber = 1;
     private Map<String, String> subjectMap = new HashMap<>();
     private Map<String, String> levelSubjectMap = new HashMap<>();
     private Random random = new Random();
-    
-    private static final String DATA_DIR = "data";
     
         public receptionist_dashboard(String userName) {
         this.currentUser = userName;
@@ -249,22 +243,17 @@ public class receptionist_dashboard extends JFrame {
         subjectMap.clear();
         levelSubjectMap.clear();
         
-        String currentDir = System.getProperty("user.dir");
-        try (BufferedReader reader = new BufferedReader(new FileReader(Paths.get(currentDir, DATA_DIR, "subject.txt").toString()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split(",");
-                if (parts.length >= 3) {
-                    String subjectId = parts[0].trim();
-                    String subjectName = parts[1].trim();
-                    String level = parts[2].trim();
-                    
-                    subjectMap.put(subjectId, subjectName);
-                    levelSubjectMap.put(subjectId, level);
-                }
+        List<String> subjectLines = function.readSubjects();
+        for (String line : subjectLines) {
+            String[] parts = line.split(",");
+            if (parts.length >= 3) {
+                String subjectId = parts[0].trim();
+                String subjectName = parts[1].trim();
+                String level = parts[2].trim();
+                
+                subjectMap.put(subjectId, subjectName);
+                levelSubjectMap.put(subjectId, level);
             }
-        } catch (IOException e) {
-            System.err.println("Error loading subjects: " + e.getMessage());
         }
     }
     
@@ -315,12 +304,10 @@ public class receptionist_dashboard extends JFrame {
         String status = "Active";
         
         // Save student to students.txt
-        String currentDir = System.getProperty("user.dir");
-        try (FileWriter writer = new FileWriter(Paths.get(currentDir, DATA_DIR, "students.txt").toString(), true)) {
-            // Format: studentId,name,icPassport,email,contact,address,enrollmentDate,level,status
-            writer.write(studentId + "," + name + "," + icPassport + "," + email + "," + 
-                        contact + "," + address + "," + enrollmentDate + "," + level + "," + status + "\n");
-            
+        String studentData = studentId + "," + name + "," + icPassport + "," + email + "," + 
+                            contact + "," + address + "," + enrollmentDate + "," + level + "," + status;
+        
+        if (function.addStudent(studentData)) {
             // Save student subjects
             saveStudentSubjects(studentId, selectedSubjects);
             
@@ -344,48 +331,24 @@ public class receptionist_dashboard extends JFrame {
             
             // Clear form
             clearRegistrationForm();
-            
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "Error saving student data: " + e.getMessage(), 
+        } else {
+            JOptionPane.showMessageDialog(this, "Error saving student data.", 
                                         "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
     
     private String generateNextStudentId() {
-        // Find the highest existing student number
-        String currentDir = System.getProperty("user.dir");
-        try (BufferedReader reader = new BufferedReader(new FileReader(Paths.get(currentDir, DATA_DIR, "students.txt").toString()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split(",");
-                if (parts.length > 0 && parts[0].startsWith("S")) {
-                    try {
-                        int num = Integer.parseInt(parts[0].substring(1));
-                        if (num >= nextStudentNumber) {
-                            nextStudentNumber = num + 1;
-                        }
-                    } catch (NumberFormatException ignored) {}
-                }
-            }
-        } catch (IOException e) {
-            // File doesn't exist yet, start with S001
-        }
-        
-        return String.format("S%03d", nextStudentNumber++);
+        return function.generateStudentId();
     }
     
     private void saveStudentSubjects(String studentId, List<String> selectedSubjects) {
-        String currentDir = System.getProperty("user.dir");
-        try (FileWriter writer = new FileWriter(Paths.get(currentDir, DATA_DIR, "student_subjects.txt").toString(), true)) {
-            for (String subjectDisplay : selectedSubjects) {
-                // Extract subject ID from display string like "Math (SUB001)"
-                String subjectId = extractSubjectId(subjectDisplay);
-                if (!subjectId.isEmpty()) {
-                    writer.write(studentId + "," + subjectId + "\n");
-                }
+        for (String subjectDisplay : selectedSubjects) {
+            // Extract subject ID from display string like "Math (SUB001)"
+            String subjectId = extractSubjectId(subjectDisplay);
+            if (!subjectId.isEmpty()) {
+                String studentSubjectData = studentId + "," + subjectId;
+                function.addStudentSubject(studentSubjectData);
             }
-        } catch (IOException e) {
-            System.err.println("Error saving student subjects: " + e.getMessage());
         }
     }
     
@@ -470,37 +433,41 @@ public class receptionist_dashboard extends JFrame {
     }
     
     private void updateStudentSubjectsFile(String studentId, List<String> selectedSubjects) {
-        String currentDir = System.getProperty("user.dir");
-        
         // Read all existing student-subject relationships
-        List<String> allLines = new ArrayList<>();
-        try (BufferedReader reader = new BufferedReader(new FileReader(Paths.get(currentDir, DATA_DIR, "student_subjects.txt").toString()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split(",");
-                if (parts.length >= 2 && !parts[0].trim().equals(studentId)) {
-                    allLines.add(line); // Keep other students' subjects
-                }
+        List<String> allLines = function.readStudentSubjects();
+        List<String> updatedLines = new ArrayList<>();
+        
+        // Keep other students' subjects
+        for (String line : allLines) {
+            String[] parts = line.split(",");
+            if (parts.length >= 2 && !parts[0].trim().equals(studentId)) {
+                updatedLines.add(line);
             }
-        } catch (IOException e) {
-            System.err.println("Error reading student subjects: " + e.getMessage());
         }
         
         // Add new subjects for this student
         for (String subjectDisplay : selectedSubjects) {
             String subjectId = extractSubjectId(subjectDisplay);
             if (!subjectId.isEmpty()) {
-                allLines.add(studentId + "," + subjectId);
+                updatedLines.add(studentId + "," + subjectId);
             }
         }
         
-        // Write back to file
-        try (FileWriter writer = new FileWriter(Paths.get(currentDir, DATA_DIR, "student_subjects.txt").toString(), false)) {
-            for (String line : allLines) {
-                writer.write(line + "\n");
+        // Clear the file and rewrite all data
+        // First, delete all existing entries for this student
+        for (String line : allLines) {
+            String[] parts = line.split(",");
+            if (parts.length >= 2 && parts[0].trim().equals(studentId)) {
+                function.deleteStudentSubject(line);
             }
-        } catch (IOException e) {
-            System.err.println("Error updating student subjects: " + e.getMessage());
+        }
+        
+        // Add new subjects for this student
+        for (String subjectDisplay : selectedSubjects) {
+            String subjectId = extractSubjectId(subjectDisplay);
+            if (!subjectId.isEmpty()) {
+                function.addStudentSubject(studentId + "," + subjectId);
+            }
         }
     }
     
@@ -536,27 +503,14 @@ public class receptionist_dashboard extends JFrame {
     }
     
     private void removeStudentSubjects(String studentId) {
-        String currentDir = System.getProperty("user.dir");
-        List<String> remainingLines = new ArrayList<>();
+        List<String> allLines = function.readStudentSubjects();
         
-        try (BufferedReader reader = new BufferedReader(new FileReader(Paths.get(currentDir, DATA_DIR, "student_subjects.txt").toString()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split(",");
-                if (parts.length >= 2 && !parts[0].trim().equals(studentId)) {
-                    remainingLines.add(line);
-                }
+        // Delete all entries for this student
+        for (String line : allLines) {
+            String[] parts = line.split(",");
+            if (parts.length >= 2 && parts[0].trim().equals(studentId)) {
+                function.deleteStudentSubject(line);
             }
-        } catch (IOException e) {
-            System.err.println("Error reading student subjects: " + e.getMessage());
-        }
-        
-        try (FileWriter writer = new FileWriter(Paths.get(currentDir, DATA_DIR, "student_subjects.txt").toString(), false)) {
-            for (String line : remainingLines) {
-                writer.write(line + "\n");
-            }
-        } catch (IOException e) {
-            System.err.println("Error updating student subjects: " + e.getMessage());
         }
     }
     
@@ -583,21 +537,18 @@ public class receptionist_dashboard extends JFrame {
             String receiptId = "RCP" + paymentId.substring(3); // RCP001 from PAY001
             
             // Save payment record
-            String currentDir = System.getProperty("user.dir");
-            try (FileWriter writer = new FileWriter(Paths.get(currentDir, DATA_DIR, "payments.txt").toString(), true)) {
-                // Format: paymentId,studentId,description,amount,paymentMethod,timestamp,period,receiptId,status
-                writer.write(paymentId + "," + studentId + ",," + amount + "," + paymentMethod + "," + 
-                           timestamp + "," + period + "," + receiptId + ",Completed\n");
-                
+            String paymentData = paymentId + "," + studentId + ",," + amount + "," + paymentMethod + "," + 
+                               timestamp + "," + period + "," + receiptId + ",Completed";
+            
+            if (function.addPayment(paymentData)) {
                 JOptionPane.showMessageDialog(this, "Payment accepted successfully!\nPayment ID: " + paymentId, 
                                             "Success", JOptionPane.INFORMATION_MESSAGE);
                 
                 // Clear payment fields
                 paymentStudentCombo.setSelectedIndex(0);
                 paymentAmountField.setText("");
-                
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(this, "Error saving payment: " + e.getMessage(), 
+            } else {
+                JOptionPane.showMessageDialog(this, "Error saving payment.", 
                                             "Error", JOptionPane.ERROR_MESSAGE);
             }
             
@@ -608,27 +559,11 @@ public class receptionist_dashboard extends JFrame {
     }
     
     private String generateNextPaymentId() {
-        return String.format("PAY%03d", nextPaymentNumber++);
+        return function.generatePaymentId();
     }
     
     private void updateNextPaymentNumber() {
-        String currentDir = System.getProperty("user.dir");
-        try (BufferedReader reader = new BufferedReader(new FileReader(Paths.get(currentDir, DATA_DIR, "payments.txt").toString()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split(",");
-                if (parts.length > 0 && parts[0].startsWith("PAY")) {
-                    try {
-                        int num = Integer.parseInt(parts[0].substring(3));
-                        if (num >= nextPaymentNumber) {
-                            nextPaymentNumber = num + 1;
-                        }
-                    } catch (NumberFormatException ignored) {}
-                }
-            }
-        } catch (IOException e) {
-            // File doesn't exist yet, start with PAY001
-        }
+        // This method is no longer needed since function.generatePaymentId() handles ID generation
     }
     
     private void generateReceipt() {
@@ -647,7 +582,8 @@ public class receptionist_dashboard extends JFrame {
             double amount = Double.parseDouble(amountStr);
             String paymentMethod = (String) paymentMethodCombo.getSelectedItem();
             String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
-            String receiptId = "RCP" + String.format("%03d", nextPaymentNumber);
+            String paymentId = generateNextPaymentId();
+            String receiptId = "RCP" + paymentId.substring(3); // Extract number from PAY001 -> RCP001
             
             String receipt = generateReceiptText(studentId, selectedStudent, amount, paymentMethod, timestamp, receiptId);
             receiptArea.setText(receipt);
@@ -741,20 +677,14 @@ public class receptionist_dashboard extends JFrame {
     
     // Method to create user account for student
     private String[] createStudentUserAccount(String studentName, String studentId, String email) {
-        String currentDir = System.getProperty("user.dir");
-        
         // Generate random credentials
         String username = generateRandomUsername(studentName);
         String password = generateRandomPassword();
         String role = "student";
         
-        try (FileWriter writer = new FileWriter(Paths.get(currentDir, DATA_DIR, "users.txt").toString(), true)) {
-            // Format: userId,username,password,role,name
-            writer.write(studentId + "," + username + "," + password + "," + role + "," + studentName + "\n");
-            
-        } catch (IOException e) {
-            System.err.println("Error creating user account for student: " + e.getMessage());
-        }
+        // Format: userId,username,password,role,name
+        String userData = studentId + "," + username + "," + password + "," + role + "," + studentName;
+        function.addUser(userData);
         
         // Return the generated credentials
         return new String[]{username, password};
@@ -776,53 +706,31 @@ public class receptionist_dashboard extends JFrame {
     }
     
     private void loadStudentData() {
-        String currentDir = System.getProperty("user.dir");
-        File file = new File(Paths.get(currentDir, DATA_DIR, "students.txt").toString());
-        if (!file.exists()) {
-            try {
-                file.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return;
-        }
+        // Ensure file exists
+        function.createFileIfNotExists("students.txt");
         
         // Load existing student data
-        try (BufferedReader reader = new BufferedReader(new FileReader(Paths.get(currentDir, DATA_DIR, "students.txt").toString()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split(",");
-                if (parts.length >= 9) {
-                    // Format: studentId,name,icPassport,email,contact,address,enrollmentDate,level,status
-                    String studentId = parts[0].trim();
-                    String name = parts[1].trim();
-                    String icPassport = parts[2].trim();
-                    String email = parts[3].trim();
-                    String contact = parts[4].trim();
-                    String address = parts[5].trim();
-                    String level = parts[7].trim();
-                    String status = parts[8].trim();
-                    
-                    // Load subjects for this student
-                    String subjects = loadStudentSubjects(studentId);
-                    
-                    tableModel.addRow(new Object[]{
-                        studentId, name, icPassport, email, contact, address, level, subjects, status
-                    });
-                    
-                    // Update next student number
-                    try {
-                        if (studentId.startsWith("S")) {
-                            int num = Integer.parseInt(studentId.substring(1));
-                            if (num >= nextStudentNumber) {
-                                nextStudentNumber = num + 1;
-                            }
-                        }
-                    } catch (NumberFormatException ignored) {}
-                }
+        List<String> studentLines = function.readStudents();
+        for (String line : studentLines) {
+            String[] parts = line.split(",");
+            if (parts.length >= 9) {
+                // Format: studentId,name,icPassport,email,contact,address,enrollmentDate,level,status
+                String studentId = parts[0].trim();
+                String name = parts[1].trim();
+                String icPassport = parts[2].trim();
+                String email = parts[3].trim();
+                String contact = parts[4].trim();
+                String address = parts[5].trim();
+                String level = parts[7].trim();
+                String status = parts[8].trim();
+                
+                // Load subjects for this student
+                String subjects = loadStudentSubjects(studentId);
+                
+                tableModel.addRow(new Object[]{
+                    studentId, name, icPassport, email, contact, address, level, subjects, status
+                });
             }
-        } catch (IOException e) {
-            System.err.println("Error loading student data: " + e.getMessage());
         }
         
         // Refresh student dropdown after loading data
@@ -831,22 +739,17 @@ public class receptionist_dashboard extends JFrame {
     
     private String loadStudentSubjects(String studentId) {
         List<String> subjects = new ArrayList<>();
-        String currentDir = System.getProperty("user.dir");
         
-        try (BufferedReader reader = new BufferedReader(new FileReader(Paths.get(currentDir, DATA_DIR, "student_subjects.txt").toString()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split(",");
-                if (parts.length >= 2 && parts[0].trim().equals(studentId)) {
-                    String subjectId = parts[1].trim();
-                    String subjectName = subjectMap.get(subjectId);
-                    if (subjectName != null) {
-                        subjects.add(subjectName);
-                    }
+        List<String> studentSubjectLines = function.readStudentSubjects();
+        for (String line : studentSubjectLines) {
+            String[] parts = line.split(",");
+            if (parts.length >= 2 && parts[0].trim().equals(studentId)) {
+                String subjectId = parts[1].trim();
+                String subjectName = subjectMap.get(subjectId);
+                if (subjectName != null) {
+                    subjects.add(subjectName);
                 }
             }
-        } catch (IOException e) {
-            System.err.println("Error loading student subjects: " + e.getMessage());
         }
         
         return String.join(", ", subjects);
@@ -869,24 +772,30 @@ public class receptionist_dashboard extends JFrame {
     }
     
     private void updateStudentFile() {
-        String currentDir = System.getProperty("user.dir");
-        try (FileWriter writer = new FileWriter(Paths.get(currentDir, DATA_DIR, "students.txt").toString(), false)) {
-            for (int i = 0; i < tableModel.getRowCount(); i++) {
-                // Format: studentId,name,icPassport,email,contact,address,enrollmentDate,level,status
-                String line = tableModel.getValueAt(i, 0) + "," +  // ID
-                             tableModel.getValueAt(i, 1) + "," +   // Name
-                             tableModel.getValueAt(i, 2) + "," +   // IC
-                             tableModel.getValueAt(i, 3) + "," +   // Email
-                             tableModel.getValueAt(i, 4) + "," +   // Contact
-                             tableModel.getValueAt(i, 5) + "," +   // Address
-                             new SimpleDateFormat("yyyy-MM-dd").format(new Date()) + "," + // Date
-                             tableModel.getValueAt(i, 6) + "," +   // Level
-                             tableModel.getValueAt(i, 8) + "\n";   // Status
-                writer.write(line);
+        // First clear all existing student data
+        List<String> allStudents = function.readStudents();
+        for (String studentLine : allStudents) {
+            function.deleteStudent(studentLine);
+        }
+        
+        // Then add all current table data
+        for (int i = 0; i < tableModel.getRowCount(); i++) {
+            // Format: studentId,name,icPassport,email,contact,address,enrollmentDate,level,status
+            String line = tableModel.getValueAt(i, 0) + "," +  // ID
+                         tableModel.getValueAt(i, 1) + "," +   // Name
+                         tableModel.getValueAt(i, 2) + "," +   // IC
+                         tableModel.getValueAt(i, 3) + "," +   // Email
+                         tableModel.getValueAt(i, 4) + "," +   // Contact
+                         tableModel.getValueAt(i, 5) + "," +   // Address
+                         new SimpleDateFormat("yyyy-MM-dd").format(new Date()) + "," + // Date
+                         tableModel.getValueAt(i, 6) + "," +   // Level
+                         tableModel.getValueAt(i, 8);          // Status
+            
+            if (!function.addStudent(line)) {
+                JOptionPane.showMessageDialog(this, "Error updating student file.", 
+                                            "Error", JOptionPane.ERROR_MESSAGE);
+                return;
             }
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "Error updating student file: " + e.getMessage(), 
-                                        "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
     
