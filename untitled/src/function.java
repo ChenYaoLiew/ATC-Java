@@ -3,44 +3,83 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class function {
-    private static final String DATA_PATH = System.getProperty("user.dir") + "/untitled/data/";
+    // Cross-platform data path construction
+    private static final String DATA_PATH;
+    
+    static {
+        // Get current working directory and build cross-platform path
+        String userDir = System.getProperty("user.dir");
+        DATA_PATH = userDir + File.separator + "untitled" + File.separator + "data" + File.separator;
+        
+        // Ensure data directory exists
+        ensureDataDirectoryExists();
+    }
+    
+    // Ensure the data directory exists, create if it doesn't
+    private static void ensureDataDirectoryExists() {
+        File dataDir = new File(DATA_PATH);
+        if (!dataDir.exists()) {
+            dataDir.mkdirs();
+        }
+    }
+    
+    // Get full file path
+    private static String getFullPath(String fileName) {
+        return DATA_PATH + fileName;
+    }
     
     // Generic method to read lines from any file
     private static List<String> readFile(String fileName) {
         List<String> lines = new ArrayList<>();
-        try (BufferedReader reader = new BufferedReader(new FileReader(DATA_PATH + fileName))) {
+        String fullPath = getFullPath(fileName);
+        
+        File file = new File(fullPath);
+        if (!file.exists()) {
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                System.err.println("Failed to create file " + fullPath + ": " + e.getMessage());
+            }
+            return lines; // Return empty list for new file
+        }
+        
+        try (BufferedReader reader = new BufferedReader(new FileReader(fullPath))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 lines.add(line);
             }
         } catch (IOException e) {
-            System.err.println("Error reading from " + fileName + ": " + e.getMessage());
+            System.err.println("Error reading from " + fullPath + ": " + e.getMessage());
         }
         return lines;
     }
 
     // Generic method to write lines to any file
     private static boolean writeFile(String fileName, List<String> lines) {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(DATA_PATH + fileName))) {
+        String fullPath = getFullPath(fileName);
+        
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(fullPath))) {
             for (String line : lines) {
                 writer.write(line);
                 writer.newLine();
             }
             return true;
         } catch (IOException e) {
-            System.err.println("Error writing to " + fileName + ": " + e.getMessage());
+            System.err.println("Error writing to " + fullPath + ": " + e.getMessage());
             return false;
         }
     }
 
     // Generic method to append a line to any file
     private static boolean appendToFile(String fileName, String line) {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(DATA_PATH + fileName, true))) {
+        String fullPath = getFullPath(fileName);
+        
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(fullPath, true))) {
             writer.write(line);
             writer.newLine();
             return true;
         } catch (IOException e) {
-            System.err.println("Error appending to " + fileName + ": " + e.getMessage());
+            System.err.println("Error appending to " + fullPath + ": " + e.getMessage());
             return false;
         }
     }
@@ -287,18 +326,18 @@ public class function {
 
     // Utility method to check if a file exists
     public static boolean fileExists(String fileName) {
-        File file = new File(DATA_PATH + fileName);
+        File file = new File(getFullPath(fileName));
         return file.exists() && file.isFile();
     }
 
     // Utility method to create a file if it doesn't exist
     public static boolean createFileIfNotExists(String fileName) {
-        File file = new File(DATA_PATH + fileName);
+        File file = new File(getFullPath(fileName));
         if (!file.exists()) {
             try {
                 return file.createNewFile();
             } catch (IOException e) {
-                System.err.println("Error creating file " + fileName + ": " + e.getMessage());
+                System.err.println("Error creating file " + getFullPath(fileName) + ": " + e.getMessage());
                 return false;
             }
         }
