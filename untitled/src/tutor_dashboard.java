@@ -1,5 +1,6 @@
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
@@ -16,7 +17,7 @@ public class tutor_dashboard extends JFrame {
     private JLabel welcomeLabel;
     private JButton logoutButton;
     private JTabbedPane tabbedPane;
-    
+
     // Profile Tab
     private JPanel profilePanel;
     private JTextField tutorIdField;
@@ -26,14 +27,14 @@ public class tutor_dashboard extends JFrame {
     private JTextField contactField;
     private JTextField addressField;
     private JButton updateProfileButton;
-    
+
     // Classes Tab
     private JPanel classesPanel;
     private JTable classesTable;
     private JButton addClassButton;
     private JButton updateClassButton;
     private JButton deleteClassButton;
-    
+
     // Students Tab
     private JPanel studentsPanel;
     private JTable studentsTable;
@@ -41,6 +42,10 @@ public class tutor_dashboard extends JFrame {
     private Tutor currentTutor;
     private DefaultTableModel classesTableModel;
     private DefaultTableModel studentsTableModel;
+    private DefaultTableModel scheduleTableModel;
+    private DefaultTableModel subjectsTableModel;
+    private JTable scheduleTable;
+    private JTable subjectsTable;
     private static final String DATA_DIR = "data";
 
     public tutor_dashboard(Tutor tutor) {
@@ -84,17 +89,21 @@ public class tutor_dashboard extends JFrame {
             SwingUtilities.invokeLater(() -> new main_page().setVisible(true));
         });
 
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
+        buttonPanel.setOpaque(false);
+        buttonPanel.add(logoutButton);
+
         headerPanel.add(welcomeLabel, BorderLayout.CENTER);
-        headerPanel.add(logoutButton, BorderLayout.EAST);
+        headerPanel.add(buttonPanel, BorderLayout.EAST);
 
         // Modern tabbed pane with reordered tabs
         tabbedPane = new JTabbedPane();
         tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 14));
         tabbedPane.setBackground(new Color(0xF8F9FA));
         tabbedPane.addTab("📅 Schedule", createSchedulePanel());
-        tabbedPane.addTab("👤 Profile", createProfilePanel());
         tabbedPane.addTab("📚 Classes", createClassesPanel());
         tabbedPane.addTab("📖 Subjects", createSubjectsPanel());
+        tabbedPane.addTab("👤 Profile", createProfilePanel());
 
         contentPane.add(headerPanel, BorderLayout.NORTH);
         contentPane.add(tabbedPane, BorderLayout.CENTER);
@@ -111,18 +120,14 @@ public class tutor_dashboard extends JFrame {
     }
 
     private JPanel createProfilePanel() {
-        JPanel panel = new JPanel(new BorderLayout(15, 15));
-        panel.setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
-        panel.setBackground(new Color(0xF8F9FA));
-        panel.setOpaque(true);
+        JPanel mainPanel = new JPanel(new GridLayout(1, 2, 30, 0));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
+        mainPanel.setBackground(new Color(0xF8F9FA));
 
-        JLabel titleLabel = new JLabel("👤 My Profile Information");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        titleLabel.setForeground(new Color(0x343A40));
-
-        JPanel formPanel = new JPanel(new GridBagLayout());
-        formPanel.setBackground(new Color(0xF8F9FA));
-        formPanel.setOpaque(true);
+        // Profile Info Panel (left)
+        JPanel profilePanel = new JPanel(new GridBagLayout());
+        profilePanel.setBorder(BorderFactory.createTitledBorder("Profile Information"));
+        profilePanel.setBackground(Color.WHITE);
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(15, 15, 15, 15);
         gbc.anchor = GridBagConstraints.WEST;
@@ -130,28 +135,22 @@ public class tutor_dashboard extends JFrame {
 
         // Tutor ID field
         gbc.gridx = 0; gbc.gridy = 0;
-        addFormField(formPanel, "🆔 Tutor ID:", tutorIdField = createTextField(false), gbc);
-
+        addFormField(profilePanel, "🆔 Tutor ID:", tutorIdField = createTextField(false), gbc);
         // Name field
         gbc.gridx = 0; gbc.gridy = 1;
-        addFormField(formPanel, "👤 Name:", nameField = createTextField(false), gbc);
-
+        addFormField(profilePanel, "👤 Name:", nameField = createTextField(false), gbc);
         // IC/Passport field
         gbc.gridx = 0; gbc.gridy = 2;
-        addFormField(formPanel, "📄 IC/Passport:", icPassportField = createTextField(false), gbc);
-
+        addFormField(profilePanel, "📄 IC/Passport:", icPassportField = createTextField(false), gbc);
         // Email field
         gbc.gridx = 0; gbc.gridy = 3;
-        addFormField(formPanel, "📧 Email:", emailField = createTextField(true), gbc);
-
+        addFormField(profilePanel, "📧 Email:", emailField = createTextField(true), gbc);
         // Contact field
         gbc.gridx = 0; gbc.gridy = 4;
-        addFormField(formPanel, "📞 Contact:", contactField = createTextField(true), gbc);
-
+        addFormField(profilePanel, "📞 Contact:", contactField = createTextField(true), gbc);
         // Address field
         gbc.gridx = 0; gbc.gridy = 5;
-        addFormField(formPanel, "🏠 Address:", addressField = createTextField(true), gbc);
-
+        addFormField(profilePanel, "🏠 Address:", addressField = createTextField(true), gbc);
         // Update button
         gbc.gridx = 0; gbc.gridy = 6;
         gbc.gridwidth = 2;
@@ -166,12 +165,110 @@ public class tutor_dashboard extends JFrame {
         updateProfileButton.setOpaque(true);
         updateProfileButton.setBorderPainted(false);
         updateProfileButton.addActionListener(e -> onUpdateProfile());
-        formPanel.add(updateProfileButton, gbc);
+        profilePanel.add(updateProfileButton, gbc);
 
-        panel.add(titleLabel, BorderLayout.NORTH);
-        panel.add(formPanel, BorderLayout.CENTER);
+        // Change Password Panel (right)
+        JPanel passwordPanel = new JPanel(new GridBagLayout());
+        passwordPanel.setBorder(BorderFactory.createTitledBorder("Change Password"));
+        passwordPanel.setBackground(Color.WHITE);
+        GridBagConstraints pgbc = new GridBagConstraints();
+        pgbc.insets = new Insets(15, 15, 15, 15);
+        pgbc.anchor = GridBagConstraints.WEST;
+        pgbc.fill = GridBagConstraints.HORIZONTAL;
 
-        return panel;
+        // Current Password
+        pgbc.gridx = 0; pgbc.gridy = 0;
+        passwordPanel.add(new JLabel("Current Password:"), pgbc);
+        JPasswordField currentPasswordField = new JPasswordField(20);
+        pgbc.gridx = 1;
+        passwordPanel.add(currentPasswordField, pgbc);
+
+        // New Password
+        pgbc.gridx = 0; pgbc.gridy = 1;
+        passwordPanel.add(new JLabel("New Password:"), pgbc);
+        JPasswordField newPasswordField = new JPasswordField(20);
+        pgbc.gridx = 1;
+        passwordPanel.add(newPasswordField, pgbc);
+
+        // Confirm Password
+        pgbc.gridx = 0; pgbc.gridy = 2;
+        passwordPanel.add(new JLabel("Confirm Password:"), pgbc);
+        JPasswordField confirmPasswordField = new JPasswordField(20);
+        pgbc.gridx = 1;
+        passwordPanel.add(confirmPasswordField, pgbc);
+
+        // Password note
+        pgbc.gridx = 0; pgbc.gridy = 3; pgbc.gridwidth = 2;
+        JLabel noteLabel = new JLabel("Password must be at least 6 characters long");
+        noteLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+        noteLabel.setForeground(Color.GRAY);
+        passwordPanel.add(noteLabel, pgbc);
+
+        // Change Password Button
+        pgbc.gridx = 0; pgbc.gridy = 4; pgbc.gridwidth = 2;
+        JButton changePasswordButton = new JButton("Change Password");
+        changePasswordButton.setBackground(new Color(220, 53, 69));
+        changePasswordButton.setForeground(Color.WHITE);
+        changePasswordButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        changePasswordButton.setBorder(BorderFactory.createEmptyBorder(12, 24, 12, 24));
+        changePasswordButton.setFocusPainted(false);
+        changePasswordButton.setOpaque(true);
+        changePasswordButton.setBorderPainted(false);
+        passwordPanel.add(changePasswordButton, pgbc);
+
+        // Add action listener for password change
+        changePasswordButton.addActionListener(e -> {
+            String currentPassword = new String(currentPasswordField.getPassword());
+            String newPassword = new String(newPasswordField.getPassword());
+            String confirmPassword = new String(confirmPasswordField.getPassword());
+            if (!currentPassword.equals(currentTutor.getPassword())) {
+                showError("Password Error", "Current password is incorrect.");
+                return;
+            }
+            if (newPassword.length() < 6) {
+                showError("Password Error", "New password must be at least 6 characters long.");
+                return;
+            }
+            if (!newPassword.equals(confirmPassword)) {
+                showError("Password Error", "New password and confirm password do not match.");
+                return;
+            }
+            // Update password in tutors.txt
+            try {
+                List<String> lines = new ArrayList<>();
+                File tutorsFile = new File(DATA_DIR + "/tutors.txt");
+                BufferedReader reader = new BufferedReader(new FileReader(tutorsFile));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    String[] parts = line.split(",");
+                    if (parts.length >= 7 && parts[0].trim().equals(currentTutor.getUsername())) {
+                        // Update password (assuming password is at index 2)
+                        lines.add(String.format("%s,%s,%s,%s,%s,%s,%s",
+                                parts[0].trim(), parts[1].trim(), newPassword,
+                                parts[3].trim(), parts[4].trim(), parts[5].trim(), parts[6].trim()));
+                    } else {
+                        lines.add(line);
+                    }
+                }
+                reader.close();
+                FileWriter writer = new FileWriter(tutorsFile);
+                for (String updatedLine : lines) {
+                    writer.write(updatedLine + "\n");
+                }
+                writer.close();
+                currentTutor.setPassword(newPassword);
+                showSuccess("Password changed successfully!");
+                currentPasswordField.setText("");
+                newPasswordField.setText("");
+                confirmPasswordField.setText("");
+            } catch (IOException ex) {
+                showError("Error updating password", ex.getMessage());
+            }
+        });
+
+        mainPanel.add(profilePanel);
+        mainPanel.add(passwordPanel);
+        return mainPanel;
     }
 
     private JPanel createClassesPanel() {
@@ -186,7 +283,7 @@ public class tutor_dashboard extends JFrame {
 
         // Initialize classes table with updated columns
         classesTableModel = new DefaultTableModel(
-            new String[]{"Class ID", "Subject ID", "Subject", "Level", "Fee"}, 0
+                new String[]{"Class ID", "Subject ID", "Subject", "Level", "Fee"}, 0
         ) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -206,27 +303,9 @@ public class tutor_dashboard extends JFrame {
         JScrollPane classesScrollPane = new JScrollPane(classesTable);
         classesScrollPane.setBorder(BorderFactory.createEmptyBorder());
 
-        // Buttons panel
-        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
-        buttonsPanel.setBackground(new Color(0xF8F9FA));
-        buttonsPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 0, 0));
-
-        addClassButton = createStyledButton("➕ Add Class", new Color(40, 167, 69));
-        updateClassButton = createStyledButton("✏️ Update Class", new Color(255, 193, 7));
-        deleteClassButton = createStyledButton("🗑️ Delete Class", new Color(220, 53, 69));
-
-        addClassButton.addActionListener(e -> onAddClass());
-        updateClassButton.addActionListener(e -> onUpdateClass());
-        deleteClassButton.addActionListener(e -> onDeleteClass());
-
-        buttonsPanel.add(addClassButton);
-        buttonsPanel.add(updateClassButton);
-        buttonsPanel.add(deleteClassButton);
-
         panel.add(classesTitle, BorderLayout.NORTH);
         panel.add(classesScrollPane, BorderLayout.CENTER);
-        panel.add(buttonsPanel, BorderLayout.SOUTH);
-
+        // No buttons panel
         return panel;
     }
 
@@ -241,15 +320,15 @@ public class tutor_dashboard extends JFrame {
         subjectsTitle.setForeground(new Color(0x343A40));
 
         // Initialize subjects table with Tutor ID column
-        DefaultTableModel subjectsTableModel = new DefaultTableModel(
-            new String[]{"Subject ID", "Subject", "Level", "Tutor ID"}, 0
+        subjectsTableModel = new DefaultTableModel(
+                new String[]{"Subject ID", "Subject", "Level", "Tutor ID"}, 0
         ) {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
             }
         };
-        JTable subjectsTable = new JTable(subjectsTableModel);
+        subjectsTable = new JTable(subjectsTableModel);
         styleTable(subjectsTable);
 
         // Set preferred column widths
@@ -299,15 +378,15 @@ public class tutor_dashboard extends JFrame {
                     if (parts.length >= 3) {
                         Vector<String> row = new Vector<>();
                         String subjectId = parts[0].trim();
-                        
+
                         row.add(subjectId); // Subject ID
                         row.add(parts[1].trim()); // Subject
                         row.add(parts[2].trim()); // Level
-                        
+
                         // Add tutor ID from the map, or "-" if not assigned
                         String tutorId = tutorMap.get(subjectId);
                         row.add(tutorId != null ? tutorId : "-");
-                        
+
                         subjectsTableModel.addRow(row);
                     }
                 }
@@ -340,25 +419,64 @@ public class tutor_dashboard extends JFrame {
         scheduleTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
         scheduleTitle.setForeground(new Color(0x343A40));
 
-        // Initialize schedule table
-        DefaultTableModel scheduleTableModel = new DefaultTableModel(
-            new String[]{"Schedule ID", "Class ID", "Day", "Start Time", "End Time", "Room"}, 0
+        // Initialize schedule table with updated columns
+        scheduleTableModel = new DefaultTableModel(
+                new String[]{"Subject", "Level", "Day", "Start Time", "End Time", "Room", "Namelist", "scheduleId", "classId"}, 0
         ) {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
             }
         };
-        JTable scheduleTable = new JTable(scheduleTableModel);
+        scheduleTable = new JTable(scheduleTableModel);
         styleTable(scheduleTable);
 
         // Set preferred column widths
-        scheduleTable.getColumnModel().getColumn(0).setPreferredWidth(100); // Schedule ID
-        scheduleTable.getColumnModel().getColumn(1).setPreferredWidth(100); // Class ID
+        scheduleTable.getColumnModel().getColumn(0).setPreferredWidth(150); // Subject
+        scheduleTable.getColumnModel().getColumn(1).setPreferredWidth(100); // Level
         scheduleTable.getColumnModel().getColumn(2).setPreferredWidth(100); // Day
         scheduleTable.getColumnModel().getColumn(3).setPreferredWidth(100); // Start Time
         scheduleTable.getColumnModel().getColumn(4).setPreferredWidth(100); // End Time
         scheduleTable.getColumnModel().getColumn(5).setPreferredWidth(100); // Room
+        scheduleTable.getColumnModel().getColumn(6).setPreferredWidth(120); // Namelist button
+        // Hide the last two columns (scheduleId, classId)
+        scheduleTable.getColumnModel().getColumn(7).setMinWidth(0);
+        scheduleTable.getColumnModel().getColumn(7).setMaxWidth(0);
+        scheduleTable.getColumnModel().getColumn(7).setWidth(0);
+        scheduleTable.getColumnModel().getColumn(8).setMinWidth(0);
+        scheduleTable.getColumnModel().getColumn(8).setMaxWidth(0);
+        scheduleTable.getColumnModel().getColumn(8).setWidth(0);
+
+        // Add button renderer for the Namelist column
+        scheduleTable.getColumnModel().getColumn(6).setCellRenderer(new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                                                           boolean isSelected, boolean hasFocus, int row, int column) {
+                JButton button = new JButton(value != null ? value.toString() : "");
+                button.setBackground(new Color(40, 167, 69)); // Green color
+                button.setForeground(Color.WHITE);
+                button.setFont(new Font("Segoe UI", Font.BOLD, 12));
+                button.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
+                button.setFocusPainted(false);
+                return button;
+            }
+        });
+
+        // Add mouse listener for button clicks
+        scheduleTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int column = scheduleTable.getColumnModel().getColumnIndexAtX(e.getX());
+                int row = e.getY() / scheduleTable.getRowHeight();
+
+                if (row < scheduleTable.getRowCount() && row >= 0 &&
+                        column == 6 && e.getClickCount() == 1) {
+                    String subject = (String) scheduleTable.getValueAt(row, 0);
+                    String level = (String) scheduleTable.getValueAt(row, 1);
+                    showStudentsDialog(subject, level);
+                }
+            }
+        });
 
         JScrollPane scheduleScrollPane = new JScrollPane(scheduleTable);
         scheduleScrollPane.setBorder(BorderFactory.createEmptyBorder());
@@ -382,11 +500,137 @@ public class tutor_dashboard extends JFrame {
         return panel;
     }
 
+    private void showStudentsDialog(String subject, String level) {
+        // Create dialog
+        JDialog dialog = new JDialog(this, "Students in " + subject + " (" + level + ")", true);
+        dialog.setLayout(new BorderLayout(10, 10));
+        dialog.setBackground(new Color(0xF8F9FA));
+
+        // Create table model for students
+        DefaultTableModel studentsModel = new DefaultTableModel(
+                new String[]{"Student ID", "Name", "Level"}, 0
+        ) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        JTable studentsTable = new JTable(studentsModel);
+        styleTable(studentsTable);
+
+        // Create header panel with title and total count
+        JPanel headerPanel = new JPanel(new BorderLayout(10, 0));
+        headerPanel.setBackground(new Color(0xF8F9FA));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Add title
+        JLabel titleLabel = new JLabel("👥 Student Namelist");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        headerPanel.add(titleLabel, BorderLayout.WEST);
+
+        // Add total count label (will be updated after loading data)
+        JLabel totalCountLabel = new JLabel("");
+        totalCountLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        totalCountLabel.setForeground(new Color(40, 167, 69)); // Match the button color
+        headerPanel.add(totalCountLabel, BorderLayout.EAST);
+
+        try {
+            // First get the subject ID for the given subject name and level
+            String subjectId = "";
+            File subjectsFile = new File(DATA_DIR + "/subject.txt");
+            if (subjectsFile.exists()) {
+                BufferedReader reader = new BufferedReader(new FileReader(subjectsFile));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    String[] parts = line.split(",");
+                    if (parts.length >= 3 && parts[1].trim().equals(subject) && parts[2].trim().equals(level)) {
+                        subjectId = parts[0].trim();
+                        break;
+                    }
+                }
+                reader.close();
+            }
+
+            if (!subjectId.isEmpty()) {
+                // Get all student IDs enrolled in this subject
+                Set<String> enrolledStudentIds = new HashSet<>();
+                File studentSubjectsFile = new File(DATA_DIR + "/student_subjects.txt");
+                if (studentSubjectsFile.exists()) {
+                    BufferedReader reader = new BufferedReader(new FileReader(studentSubjectsFile));
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        String[] parts = line.split(",");
+                        if (parts.length >= 2 && parts[1].trim().equals(subjectId)) {
+                            enrolledStudentIds.add(parts[0].trim());
+                        }
+                    }
+                    reader.close();
+                }
+
+                // Get student details and add to table
+                File studentsFile = new File(DATA_DIR + "/students.txt");
+                if (studentsFile.exists()) {
+                    BufferedReader reader = new BufferedReader(new FileReader(studentsFile));
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        String[] parts = line.split(",");
+                        if (parts.length >= 8 && enrolledStudentIds.contains(parts[0].trim())) {
+                            Vector<String> row = new Vector<>();
+                            row.add(parts[0].trim()); // Student ID
+                            row.add(parts[1].trim()); // Name
+                            row.add(parts[7].trim()); // Level
+                            studentsModel.addRow(row);
+                        }
+                    }
+                    reader.close();
+                }
+
+                // Update total count label
+                totalCountLabel.setText("Total Students: " + studentsModel.getRowCount());
+            }
+        } catch (IOException e) {
+            showError("Error", "Failed to load student data: " + e.getMessage());
+        }
+
+        // Add close button
+        JButton closeButton = new JButton("Close");
+        closeButton.setBackground(new Color(0, 123, 255));
+        closeButton.setForeground(Color.WHITE);
+        closeButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        closeButton.addActionListener(e -> dialog.dispose());
+
+        // Layout
+        dialog.add(headerPanel, BorderLayout.NORTH);
+        dialog.add(new JScrollPane(studentsTable), BorderLayout.CENTER);
+        dialog.add(closeButton, BorderLayout.SOUTH);
+
+        // Set size and location
+        dialog.setSize(500, 400);
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }
+
     private void loadScheduleData(DefaultTableModel scheduleTableModel) {
         scheduleTableModel.setRowCount(0);
         try {
-            // First, get all class IDs for the current tutor
-            Set<String> tutorClassIds = new HashSet<>();
+            // First, load subjects data into a map for quick lookup
+            Map<String, String[]> subjectMap = new HashMap<>();
+            File subjectsFile = new File(DATA_DIR + "/subject.txt");
+            if (subjectsFile.exists()) {
+                BufferedReader reader = new BufferedReader(new FileReader(subjectsFile));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    String[] parts = line.split(",");
+                    if (parts.length >= 3) {
+                        // Store subject name and level for each subject ID
+                        subjectMap.put(parts[0].trim(), new String[]{parts[1].trim(), parts[2].trim()});
+                    }
+                }
+                reader.close();
+            }
+
+            // Get all class IDs for the current tutor and map them to subject IDs
+            Map<String, String> classToSubjectMap = new HashMap<>();
             File classesFile = new File(DATA_DIR + "/classes.txt");
             if (classesFile.exists()) {
                 BufferedReader reader = new BufferedReader(new FileReader(classesFile));
@@ -394,28 +638,51 @@ public class tutor_dashboard extends JFrame {
                 while ((line = reader.readLine()) != null) {
                     String[] parts = line.split(",");
                     if (parts.length >= 3 && parts[2].trim().equals(currentTutor.getUsername())) {
-                        tutorClassIds.add(parts[0].trim());
+                        classToSubjectMap.put(parts[0].trim(), parts[1].trim());
                     }
                 }
                 reader.close();
             }
 
-            // Now load schedule data for the tutor's classes
+            // Now load schedule data and join with subjects info
             File scheduleFile = new File(DATA_DIR + "/schedule.txt");
             if (scheduleFile.exists()) {
                 BufferedReader reader = new BufferedReader(new FileReader(scheduleFile));
                 String line;
                 while ((line = reader.readLine()) != null) {
                     String[] parts = line.split(",");
-                    if (parts.length >= 6 && tutorClassIds.contains(parts[1].trim())) {
-                        Vector<String> row = new Vector<>();
-                        row.add(parts[0].trim()); // Schedule ID
-                        row.add(parts[1].trim()); // Class ID
-                        row.add(parts[2].trim()); // Day
-                        row.add(parts[3].trim()); // Start Time
-                        row.add(parts[4].trim()); // End Time
-                        row.add(parts[5].trim()); // Room
-                        scheduleTableModel.addRow(row);
+                    if (parts.length >= 6) {
+                        String classId = parts[1].trim();
+                        String subjectId = classToSubjectMap.get(classId);
+
+                        if (subjectId != null) {
+                            String[] subjectInfo = subjectMap.get(subjectId);
+                            if (subjectInfo != null) {
+                                // Count students for this subject
+                                int studentCount = 0;
+                                BufferedReader studentReader = new BufferedReader(new FileReader(DATA_DIR + "/student_subjects.txt"));
+                                String studentLine;
+                                while ((studentLine = studentReader.readLine()) != null) {
+                                    String[] studentParts = studentLine.split(",");
+                                    if (studentParts.length >= 2 && studentParts[1].trim().equals(subjectId)) {
+                                        studentCount++;
+                                    }
+                                }
+                                studentReader.close();
+
+                                Vector<String> row = new Vector<>();
+                                row.add(subjectInfo[0]); // Subject name
+                                row.add(subjectInfo[1]); // Level
+                                row.add(parts[2].trim()); // Day
+                                row.add(parts[3].trim()); // Start Time
+                                row.add(parts[4].trim()); // End Time
+                                row.add(parts[5].trim()); // Room
+                                row.add("👥 Namelist (" + studentCount + ")"); // Namelist button
+                                row.add(parts[0].trim()); // scheduleId (hidden)
+                                row.add(classId); // classId (hidden)
+                                scheduleTableModel.addRow(row);
+                            }
+                        }
                     }
                 }
                 reader.close();
@@ -428,45 +695,34 @@ public class tutor_dashboard extends JFrame {
     private void loadAllData() {
         loadProfileData();
         loadClassesData();
-        // Remove studentsTableModel since we replaced it with schedule
+        loadScheduleData(scheduleTableModel);
+        loadSubjectsData(subjectsTableModel);
+        if (classesTable != null) classesTable.revalidate();
+        if (scheduleTable != null) scheduleTable.revalidate();
+        if (subjectsTable != null) subjectsTable.revalidate();
     }
 
     private void loadProfileData() {
         try {
-            File tutorsFile = new File(DATA_DIR + "/tutors.txt");
-            if (tutorsFile.exists()) {
-                BufferedReader reader = new BufferedReader(new FileReader(tutorsFile));
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    String[] parts = line.split(",");
-                    if (parts.length >= 7 && parts[0].trim().equals(currentTutor.getUsername())) {
-                        // Format the fields with proper labels
-                        tutorIdField.setText(parts[0].trim());
-                        nameField.setText(parts[1].trim());
-                        icPassportField.setText(parts[2].trim());
-                        emailField.setText(parts[3].trim());
-                        contactField.setText(parts[4].trim());
-                        addressField.setText(parts[5].trim());
-
-                        // Update labels with icons and better formatting
-                        updateFormLabels();
-
-                        // Update the welcome label with the tutor's ID and name
-                        welcomeLabel.setText(String.format("Welcome, %s (%s)", parts[1].trim(), parts[0].trim()));
-                        
-                        // Update current tutor object with latest data
-                        currentTutor.setName(parts[1].trim());
-                        currentTutor.setEmail(parts[3].trim());
-                        currentTutor.setContactNumber(parts[4].trim());
-
-                        // Set window title with tutor ID and name
-                        setTitle(String.format("Tutor Dashboard - %s (%s)", parts[1].trim(), parts[0].trim()));
-                        break;
-                    }
+            for (String line : function.readTutors()) {
+                String[] parts = line.split(",");
+                if (parts.length >= 7 && parts[0].trim().equals(currentTutor.getUsername())) {
+                    tutorIdField.setText(parts[0].trim());
+                    nameField.setText(parts[1].trim());
+                    icPassportField.setText(parts[2].trim());
+                    emailField.setText(parts[3].trim());
+                    contactField.setText(parts[4].trim());
+                    addressField.setText(parts[5].trim());
+                    updateFormLabels();
+                    welcomeLabel.setText(String.format("Welcome, %s (%s)", parts[1].trim(), parts[0].trim()));
+                    currentTutor.setName(parts[1].trim());
+                    currentTutor.setEmail(parts[3].trim());
+                    currentTutor.setContactNumber(parts[4].trim());
+                    setTitle(String.format("Tutor Dashboard - %s (%s)", parts[1].trim(), parts[0].trim()));
+                    break;
                 }
-                reader.close();
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             showError("Error loading profile", e.getMessage());
         }
     }
@@ -525,10 +781,10 @@ public class tutor_dashboard extends JFrame {
                     if (parts.length >= 4 && parts[2].trim().equals(currentTutor.getUsername())) {
                         Vector<String> row = new Vector<>();
                         String subjectId = parts[1].trim();
-                        
+
                         row.add(parts[0].trim()); // Class ID
                         row.add(subjectId); // Subject ID
-                        
+
                         // Add subject name and level from the subject map
                         String[] subjectInfo = subjectMap.get(subjectId);
                         if (subjectInfo != null) {
@@ -538,7 +794,7 @@ public class tutor_dashboard extends JFrame {
                             row.add("Unknown"); // Subject
                             row.add("Unknown"); // Level
                         }
-                        
+
                         row.add("RM " + parts[3].trim()); // Fee with RM prefix
                         classesTableModel.addRow(row);
                     }
@@ -554,7 +810,7 @@ public class tutor_dashboard extends JFrame {
         String email = emailField.getText().trim();
         String contact = contactField.getText().trim();
         String address = addressField.getText().trim();
-        
+
         if (email.isEmpty() || contact.isEmpty() || address.isEmpty()) {
             showError("Validation Error", "Please fill in all fields.");
             return;
@@ -573,35 +829,25 @@ public class tutor_dashboard extends JFrame {
         }
 
         try {
-            List<String> lines = new ArrayList<>();
-            File tutorsFile = new File(DATA_DIR + "/tutors.txt");
-            BufferedReader reader = new BufferedReader(new FileReader(tutorsFile));
-            String line;
-            while ((line = reader.readLine()) != null) {
+            String oldData = null, newData = null;
+            for (String line : function.readTutors()) {
                 String[] parts = line.split(",");
                 if (parts.length >= 7 && parts[0].trim().equals(currentTutor.getUsername())) {
-                    // Preserve ID, name, IC/passport, and status while updating email, contact, and address
-                    lines.add(String.format("%s,%s,%s,%s,%s,%s,%s",
+                    oldData = line;
+                    newData = String.format("%s,%s,%s,%s,%s,%s,%s",
                             parts[0].trim(), parts[1].trim(), parts[2].trim(),
-                            email, contact, address, parts[6].trim()));
-                } else {
-                    lines.add(line);
+                            email, contact, address, parts[6].trim());
+                    break;
                 }
             }
-            reader.close();
-
-            FileWriter writer = new FileWriter(tutorsFile);
-            for (String updatedLine : lines) {
-                writer.write(updatedLine + "\n");
+            if (oldData != null && newData != null && function.updateTutor(oldData, newData)) {
+                currentTutor.setEmail(email);
+                currentTutor.setContactNumber(contact);
+                showSuccess("Profile updated successfully!");
+            } else {
+                showError("Error updating profile", "Could not update tutor data.");
             }
-            writer.close();
-
-            // Update current tutor object
-            currentTutor.setEmail(email);
-            currentTutor.setContactNumber(contact);
-            
-            showSuccess("Profile updated successfully!");
-        } catch (IOException e) {
+        } catch (Exception e) {
             showError("Error updating profile", e.getMessage());
         }
     }
@@ -613,9 +859,9 @@ public class tutor_dashboard extends JFrame {
         scheduleField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
 
         Object[] message = {
-            "📚 Subject:", subjectBox,
-            "🎓 Level:", levelBox,
-            "📅 Schedule:", scheduleField
+                "📚 Subject:", subjectBox,
+                "🎓 Level:", levelBox,
+                "📅 Schedule:", scheduleField
         };
 
         int option = JOptionPane.showConfirmDialog(this, message, "Add Class",
@@ -660,9 +906,9 @@ public class tutor_dashboard extends JFrame {
         scheduleField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
 
         Object[] message = {
-            "📚 Subject: " + subject,
-            "🎓 Level: " + level,
-            "📅 New Schedule:", scheduleField
+                "📚 Subject: " + subject,
+                "🎓 Level: " + level,
+                "📅 New Schedule:", scheduleField
         };
 
         int option = JOptionPane.showConfirmDialog(this, message, "Update Class",
@@ -760,8 +1006,8 @@ public class tutor_dashboard extends JFrame {
             return;
         }
 
-        String scheduleId = (String) scheduleTable.getValueAt(selectedRow, 0);
-        String classId = (String) scheduleTable.getValueAt(selectedRow, 1);
+        String scheduleId = (String) scheduleTable.getValueAt(selectedRow, 7);
+        String classId = (String) scheduleTable.getValueAt(selectedRow, 8);
         String currentDay = (String) scheduleTable.getValueAt(selectedRow, 2);
         String currentStartTime = (String) scheduleTable.getValueAt(selectedRow, 3);
         String currentEndTime = (String) scheduleTable.getValueAt(selectedRow, 4);
@@ -785,10 +1031,10 @@ public class tutor_dashboard extends JFrame {
 
         // Create the dialog components
         Object[] message = {
-            "📅 Day:", dayBox,
-            "🕒 Start Time (HH:mm):", startTimeField,
-            "🕒 End Time (HH:mm):", endTimeField,
-            "🏫 Room:", roomField
+                "📅 Day:", dayBox,
+                "🕒 Start Time (HH:mm):", startTimeField,
+                "🕒 End Time (HH:mm):", endTimeField,
+                "🏫 Room:", roomField
         };
 
         int option = JOptionPane.showConfirmDialog(this, message, "Update Schedule",
@@ -808,42 +1054,29 @@ public class tutor_dashboard extends JFrame {
 
             // Validate time format (HH:mm)
             if (!newStartTime.matches("^([01]?[0-9]|2[0-3]):[0-5][0-9]$") ||
-                !newEndTime.matches("^([01]?[0-9]|2[0-3]):[0-5][0-9]$")) {
+                    !newEndTime.matches("^([01]?[0-9]|2[0-3]):[0-5][0-9]$")) {
                 showError("Validation Error", "Please enter time in HH:mm format (e.g., 09:00)");
                 return;
             }
 
             try {
-                // Read all lines from the file
-                List<String> lines = new ArrayList<>();
-                File scheduleFile = new File(DATA_DIR + "/schedule.txt");
-                BufferedReader reader = new BufferedReader(new FileReader(scheduleFile));
-                String line;
-                while ((line = reader.readLine()) != null) {
+                String oldData = null, newData = null;
+                for (String line : function.readSchedules()) {
                     String[] parts = line.split(",");
                     if (parts[0].trim().equals(scheduleId)) {
-                        // Update the schedule line
-                        lines.add(String.format("%s,%s,%s,%s,%s,%s",
-                                scheduleId, classId, newDay, newStartTime, newEndTime, newRoom));
-                    } else {
-                        lines.add(line);
+                        oldData = line;
+                        newData = String.format("%s,%s,%s,%s,%s,%s",
+                                scheduleId, classId, newDay, newStartTime, newEndTime, newRoom);
+                        break;
                     }
                 }
-                reader.close();
-
-                // Write back to file
-                FileWriter writer = new FileWriter(scheduleFile);
-                for (String updatedLine : lines) {
-                    writer.write(updatedLine + "\n");
+                if (oldData != null && newData != null && function.updateSchedule(oldData, newData)) {
+                    loadScheduleData((DefaultTableModel) scheduleTable.getModel());
+                    showSuccess("Schedule updated successfully!");
+                } else {
+                    showError("Error updating schedule", "Could not update schedule data.");
                 }
-                writer.close();
-
-                // Refresh the table
-                DefaultTableModel model = (DefaultTableModel) scheduleTable.getModel();
-                loadScheduleData(model);
-                
-                showSuccess("Schedule updated successfully!");
-            } catch (IOException e) {
+            } catch (Exception e) {
                 showError("Error updating schedule", e.getMessage());
             }
         }
@@ -862,8 +1095,8 @@ public class tutor_dashboard extends JFrame {
         field.setEditable(editable);
         field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         field.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(0xDEE2E6)),
-            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+                BorderFactory.createLineBorder(new Color(0xDEE2E6)),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
         return field;
     }
@@ -872,10 +1105,10 @@ public class tutor_dashboard extends JFrame {
         JLabel label = new JLabel(labelText);
         label.setFont(new Font("Segoe UI", Font.BOLD, 14));
         label.setForeground(new Color(0x343A40));
-        
+
         gbc.gridx = 0;
         panel.add(label, gbc);
-        
+
         gbc.gridx = 1;
         field.setPreferredSize(new Dimension(300, 35)); // Set a fixed width for better alignment
         panel.add(field, gbc);
@@ -897,10 +1130,10 @@ public class tutor_dashboard extends JFrame {
         SwingUtilities.invokeLater(() -> {
             try {
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-                
+
                 // Create a test tutor for demonstration
                 Tutor testTutor = new Tutor("T001", "tutor123", "Yin Yin", "yinyin@email.com", "+60123456789");
-                
+
                 tutor_dashboard frame = new tutor_dashboard(testTutor);
                 frame.setVisible(true);
             } catch (Exception e) {
@@ -908,4 +1141,4 @@ public class tutor_dashboard extends JFrame {
             }
         });
     }
-}   
+}
