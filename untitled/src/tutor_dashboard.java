@@ -421,8 +421,13 @@ public class tutor_dashboard extends JFrame {
 
         // Initialize schedule table with updated columns
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         DefaultTableModel scheduleTableModel = new DefaultTableModel(
             new String[]{"Subject", "Level", "Day", "Start Time", "End Time", "Room", "Namelist"}, 0
+=======
+        scheduleTableModel = new DefaultTableModel(
+                new String[]{"Subject", "Level", "Day", "Start Time", "End Time", "Room", "Namelist", "scheduleId", "classId"}, 0
+>>>>>>> Stashed changes
 =======
         scheduleTableModel = new DefaultTableModel(
                 new String[]{"Subject", "Level", "Day", "Start Time", "End Time", "Room", "Namelist", "scheduleId", "classId"}, 0
@@ -445,7 +450,10 @@ public class tutor_dashboard extends JFrame {
         scheduleTable.getColumnModel().getColumn(5).setPreferredWidth(100); // Room
         scheduleTable.getColumnModel().getColumn(6).setPreferredWidth(120); // Namelist button
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+=======
+>>>>>>> Stashed changes
         // Hide the last two columns (scheduleId, classId)
         scheduleTable.getColumnModel().getColumn(7).setMinWidth(0);
         scheduleTable.getColumnModel().getColumn(7).setMaxWidth(0);
@@ -453,6 +461,9 @@ public class tutor_dashboard extends JFrame {
         scheduleTable.getColumnModel().getColumn(8).setMinWidth(0);
         scheduleTable.getColumnModel().getColumn(8).setMaxWidth(0);
         scheduleTable.getColumnModel().getColumn(8).setWidth(0);
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
         // Add button renderer for the Namelist column
@@ -460,7 +471,11 @@ public class tutor_dashboard extends JFrame {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value,
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                     boolean isSelected, boolean hasFocus, int row, int column) {
+=======
+                                                           boolean isSelected, boolean hasFocus, int row, int column) {
+>>>>>>> Stashed changes
 =======
                                                            boolean isSelected, boolean hasFocus, int row, int column) {
 >>>>>>> Stashed changes
@@ -481,9 +496,15 @@ public class tutor_dashboard extends JFrame {
                 int column = scheduleTable.getColumnModel().getColumnIndexAtX(e.getX());
                 int row = e.getY() / scheduleTable.getRowHeight();
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                 
                 if (row < scheduleTable.getRowCount() && row >= 0 && 
                     column == 6 && e.getClickCount() == 1) {
+=======
+
+                if (row < scheduleTable.getRowCount() && row >= 0 &&
+                        column == 6 && e.getClickCount() == 1) {
+>>>>>>> Stashed changes
 =======
 
                 if (row < scheduleTable.getRowCount() && row >= 0 &&
@@ -527,7 +548,11 @@ public class tutor_dashboard extends JFrame {
         // Create table model for students
         DefaultTableModel studentsModel = new DefaultTableModel(
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
             new String[]{"Student ID", "Name", "Level"}, 0
+=======
+                new String[]{"Student ID", "Name", "Level"}, 0
+>>>>>>> Stashed changes
 =======
                 new String[]{"Student ID", "Name", "Level"}, 0
 >>>>>>> Stashed changes
@@ -677,7 +702,11 @@ public class tutor_dashboard extends JFrame {
                         String classId = parts[1].trim();
                         String subjectId = classToSubjectMap.get(classId);
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                         
+=======
+
+>>>>>>> Stashed changes
 =======
 
 >>>>>>> Stashed changes
@@ -705,6 +734,11 @@ public class tutor_dashboard extends JFrame {
                                 row.add(parts[5].trim()); // Room
                                 row.add("👥 Namelist (" + studentCount + ")"); // Namelist button
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+=======
+                                row.add(parts[0].trim()); // scheduleId (hidden)
+                                row.add(classId); // classId (hidden)
+>>>>>>> Stashed changes
 =======
                                 row.add(parts[0].trim()); // scheduleId (hidden)
                                 row.add(classId); // classId (hidden)
