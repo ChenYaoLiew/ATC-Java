@@ -1,2 +1,0 @@
-S001,Javion,990123-14-5678,javion@email.com,012-345-6789,123 Jalan Utama Kuala Lumpur,2024-01-15,Active
-S002,Emily Chen,000456-10-9876,emily.chen@email.com,013-987-6543,456 Lorong Damai Petaling Jaya,2024-02-20,Active
