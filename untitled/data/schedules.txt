@@ -1,4 +1,0 @@
-S001,C001,Monday,14:00,16:00,Room A1,Weekly
-S002,C002,Wednesday,15:00,17:00,Room B2,Weekly
-S003,C003,Friday,13:00,15:00,Room A3,Weekly
-S004,C001,Thursday,10:00,12:00,Room A1,Weekly

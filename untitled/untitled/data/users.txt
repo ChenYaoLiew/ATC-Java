@@ -1,4 +1,0 @@
-A001,admin,admin123,admin,Elson
-R001,receptionist,recep123,receptionist,ChenYao
-T001,tutor,tutor123,tutor,Yin Yin
-S001,student,student123,student,Javion
