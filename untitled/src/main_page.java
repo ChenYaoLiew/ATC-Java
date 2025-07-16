@@ -178,7 +178,7 @@ public class main_page extends JFrame {
             if (parts.length >= 6 && parts[0].trim().equals(tutorId)) {
                 // Create tutor with full details from tutors.txt
                 Tutor tutor = new Tutor(
-                    user.getUsername(),
+                    tutorId, // Use tutorId as username for filtering
                     user.getPassword(),
                     tutorName,
                     parts[3].trim(),  // email
@@ -193,7 +193,7 @@ public class main_page extends JFrame {
 
         // Fallback to basic user info if tutor record not found
         Tutor tutor = new Tutor(
-            user.getUsername(),
+            tutorId, // Use tutorId as username for filtering
             user.getPassword(),
             user.getName(),
             user.getEmail() != null ? user.getEmail() : "",
