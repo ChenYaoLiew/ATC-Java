@@ -17,6 +17,9 @@ public class student_dashboard extends JFrame {
 
     // Subject Request Tab
     private JTextArea requestTextArea;
+    private JComboBox<String> fromSubjectComboBox;
+    private JComboBox<String> toSubjectComboBox;
+    private JComboBox<String> requestTypeComboBox;
     private JButton sendRequestButton;
     private JTable requestTable;
     private JButton deleteRequestButton;
@@ -441,7 +444,57 @@ public class student_dashboard extends JFrame {
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
         titleLabel.setForeground(new Color(0x343A40));
 
-        requestTextArea = new JTextArea(3, 0);
+        // Create form panel for dropdowns and text area
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        formPanel.setBackground(new Color(0xF8F9FA));
+        formPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.anchor = GridBagConstraints.WEST;
+
+        // Request Type dropdown
+        gbc.gridx = 0; gbc.gridy = 0;
+        JLabel requestTypeLabel = new JLabel("Request Type:");
+        requestTypeLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        formPanel.add(requestTypeLabel, gbc);
+        
+        gbc.gridx = 1; gbc.gridwidth = 2; gbc.fill = GridBagConstraints.HORIZONTAL;
+        requestTypeComboBox = new JComboBox<>(new String[]{"Add", "Drop", "Change"});
+        requestTypeComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        requestTypeComboBox.addActionListener(e -> updateSubjectDropdowns());
+        formPanel.add(requestTypeComboBox, gbc);
+
+        // From Subject dropdown (for Drop and Change requests)
+        gbc.gridx = 0; gbc.gridy = 1; gbc.gridwidth = 1; gbc.fill = GridBagConstraints.NONE;
+        JLabel fromSubjectLabel = new JLabel("From Subject:");
+        fromSubjectLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        formPanel.add(fromSubjectLabel, gbc);
+        
+        gbc.gridx = 1; gbc.gridwidth = 2; gbc.fill = GridBagConstraints.HORIZONTAL;
+        fromSubjectComboBox = new JComboBox<>();
+        fromSubjectComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        formPanel.add(fromSubjectComboBox, gbc);
+
+        // To Subject dropdown (for Add and Change requests)
+        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 1; gbc.fill = GridBagConstraints.NONE;
+        JLabel toSubjectLabel = new JLabel("To Subject:");
+        toSubjectLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        formPanel.add(toSubjectLabel, gbc);
+        
+        gbc.gridx = 1; gbc.gridwidth = 2; gbc.fill = GridBagConstraints.HORIZONTAL;
+        toSubjectComboBox = new JComboBox<>();
+        toSubjectComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        formPanel.add(toSubjectComboBox, gbc);
+
+        // Reason text area
+        gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 1; gbc.fill = GridBagConstraints.NONE;
+        JLabel reasonLabel = new JLabel("Reason:");
+        reasonLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        formPanel.add(reasonLabel, gbc);
+        
+        gbc.gridx = 1; gbc.gridwidth = 2; gbc.fill = GridBagConstraints.BOTH; gbc.weightx = 1.0; gbc.weighty = 1.0;
+        requestTextArea = new JTextArea(3, 30);
         requestTextArea.setLineWrap(true);
         requestTextArea.setWrapStyleWord(true);
         requestTextArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
@@ -449,6 +502,9 @@ public class student_dashboard extends JFrame {
             BorderFactory.createLineBorder(new Color(0xDEE2E6)),
             BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
+        JScrollPane textScrollPane = new JScrollPane(requestTextArea);
+        textScrollPane.setPreferredSize(new Dimension(400, 80));
+        formPanel.add(textScrollPane, gbc);
 
         JPanel buttonPanel = new JPanel(new FlowLayout());
         buttonPanel.setBackground(new Color(0xF8F9FA));
@@ -465,7 +521,7 @@ public class student_dashboard extends JFrame {
         buttonPanel.add(deleteRequestButton);
 
         topPanel.add(titleLabel, BorderLayout.NORTH);
-        topPanel.add(new JScrollPane(requestTextArea), BorderLayout.CENTER);
+        topPanel.add(formPanel, BorderLayout.CENTER);
         topPanel.add(buttonPanel, BorderLayout.SOUTH);
 
         return topPanel;
@@ -760,11 +816,27 @@ public class student_dashboard extends JFrame {
             loadPaymentData();
             loadProfileData();
             
+            // Initialize subject dropdowns
+            initializeSubjectDropdowns();
+            
             System.out.println("All data loaded successfully for student: " + currentStudentId);
         } catch (Exception e) {
             System.err.println("Error loading data: " + e.getMessage());
             showErrorDialog("Data Loading Error", 
                 "Error loading some data: " + e.getMessage() + "\nPlease try refreshing or contact administrator.");
+        }
+    }
+
+    /**
+     * Initialize subject dropdowns on first load
+     */
+    private void initializeSubjectDropdowns() {
+        try {
+            // Set default request type to Add
+            requestTypeComboBox.setSelectedItem("Add");
+            updateSubjectDropdowns();
+        } catch (Exception e) {
+            System.err.println("Error initializing subject dropdowns: " + e.getMessage());
         }
     }
 
@@ -911,6 +983,88 @@ public class student_dashboard extends JFrame {
             System.err.println("Error creating tutor map: " + e.getMessage());
         }
         return tutorMap;
+    }
+
+    /**
+     * Update subject dropdowns based on request type selection
+     */
+    private void updateSubjectDropdowns() {
+        String requestType = (String) requestTypeComboBox.getSelectedItem();
+        
+        // Clear existing items
+        fromSubjectComboBox.removeAllItems();
+        toSubjectComboBox.removeAllItems();
+        
+        if ("Add".equals(requestType)) {
+            // For Add requests, show available subjects not enrolled
+            fromSubjectComboBox.setEnabled(false);
+            toSubjectComboBox.setEnabled(true);
+            populateAvailableSubjects();
+        } else if ("Drop".equals(requestType)) {
+            // For Drop requests, show enrolled subjects
+            fromSubjectComboBox.setEnabled(true);
+            toSubjectComboBox.setEnabled(false);
+            populateEnrolledSubjects();
+        } else if ("Change".equals(requestType)) {
+            // For Change requests, show both dropdowns
+            fromSubjectComboBox.setEnabled(true);
+            toSubjectComboBox.setEnabled(true);
+            populateEnrolledSubjects();
+            populateAvailableSubjects();
+        }
+    }
+
+    /**
+     * Populate dropdown with student's enrolled subjects
+     */
+    private void populateEnrolledSubjects() {
+        try {
+            fromSubjectComboBox.removeAllItems();
+            fromSubjectComboBox.addItem("-- Select Subject --");
+            
+            Map<String, String[]> subjectMap = getSubjectMapFromFunction();
+            
+            for (String subjectId : enrolledSubjects) {
+                String[] subjectData = subjectMap.get(subjectId);
+                if (subjectData != null && subjectData.length >= 3) {
+                    String displayText = subjectData[1] + " (" + subjectData[2] + ")";
+                    fromSubjectComboBox.addItem(subjectId + "|" + displayText);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error populating enrolled subjects: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Populate dropdown with available subjects (not enrolled)
+     */
+    private void populateAvailableSubjects() {
+        try {
+            toSubjectComboBox.removeAllItems();
+            toSubjectComboBox.addItem("-- Select Subject --");
+            
+            List<String> subjects = function.readSubjects();
+            
+            for (String line : subjects) {
+                if (line.trim().isEmpty()) continue;
+                
+                String[] parts = line.split(",");
+                if (parts.length >= 3) {
+                    String subjectId = parts[0].trim();
+                    String subjectName = parts[1].trim();
+                    String level = parts[2].trim();
+                    
+                    // Only add subjects not currently enrolled
+                    if (!enrolledSubjects.contains(subjectId)) {
+                        String displayText = subjectName + " (" + level + ")";
+                        toSubjectComboBox.addItem(subjectId + "|" + displayText);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error populating available subjects: " + e.getMessage());
+        }
     }
 
     /**
@@ -1076,15 +1230,66 @@ public class student_dashboard extends JFrame {
      */
     private void sendRequest() {
         try {
+            String requestType = (String) requestTypeComboBox.getSelectedItem();
             String requestText = requestTextArea.getText().trim();
+            
             if (requestText.isEmpty()) {
-                showErrorDialog("Input Error", "Please enter your request.");
+                showErrorDialog("Input Error", "Please enter a reason for your request.");
                 return;
             }
 
             if (requestText.length() > 500) {
-                showErrorDialog("Input Error", "Request text is too long. Please limit to 500 characters.");
+                showErrorDialog("Input Error", "Reason text is too long. Please limit to 500 characters.");
                 return;
+            }
+
+            String fromSubjectId = "";
+            String toSubjectId = "";
+            String classId = "";
+            String alternativeClassId = "";
+
+            // Validate selections based on request type
+            if ("Add".equals(requestType)) {
+                String toSelection = (String) toSubjectComboBox.getSelectedItem();
+                if (toSelection == null || toSelection.startsWith("--")) {
+                    showErrorDialog("Selection Error", "Please select a subject to add.");
+                    return;
+                }
+                toSubjectId = toSelection.split("\\|")[0];
+                classId = findClassIdForSubject(toSubjectId);
+                
+            } else if ("Drop".equals(requestType)) {
+                String fromSelection = (String) fromSubjectComboBox.getSelectedItem();
+                if (fromSelection == null || fromSelection.startsWith("--")) {
+                    showErrorDialog("Selection Error", "Please select a subject to drop.");
+                    return;
+                }
+                fromSubjectId = fromSelection.split("\\|")[0];
+                classId = findClassIdForSubject(fromSubjectId);
+                
+            } else if ("Change".equals(requestType)) {
+                String fromSelection = (String) fromSubjectComboBox.getSelectedItem();
+                String toSelection = (String) toSubjectComboBox.getSelectedItem();
+                
+                if (fromSelection == null || fromSelection.startsWith("--")) {
+                    showErrorDialog("Selection Error", "Please select a subject to change from.");
+                    return;
+                }
+                if (toSelection == null || toSelection.startsWith("--")) {
+                    showErrorDialog("Selection Error", "Please select a subject to change to.");
+                    return;
+                }
+                
+                fromSubjectId = fromSelection.split("\\|")[0];
+                toSubjectId = toSelection.split("\\|")[0];
+                
+                if (fromSubjectId.equals(toSubjectId)) {
+                    showErrorDialog("Selection Error", "Cannot change from and to the same subject.");
+                    return;
+                }
+                
+                classId = findClassIdForSubject(fromSubjectId);
+                alternativeClassId = findClassIdForSubject(toSubjectId);
             }
 
             // Generate unique request ID using function.java
@@ -1092,20 +1297,27 @@ public class student_dashboard extends JFrame {
             String date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
             String status = "Pending";
 
-            // Create request data with proper formatting
-            String requestData = String.format("%s,%s,Add,,,\"%s\",%s,%s,,Under review",
-                                             requestId, currentStudentId, requestText, date, status);
+            // Create request data based on the format in subject_requests.txt
+            // Format: RequestID,StudentID,RequestType,ClassID,AlternativeClassID,Reason,RequestDate,Status,ProcessedDate,Comments
+            String requestData = String.format("%s,%s,%s,%s,%s,\"%s\",%s,%s,,Under review",
+                                             requestId, currentStudentId, requestType, 
+                                             classId, alternativeClassId, requestText, date, status);
 
             boolean success = function.addSubjectRequest(requestData);
             
             if (success) {
                 // Add to table
+                String subjectDescription = createSubjectDescription(requestType, fromSubjectId, toSubjectId);
                 requestTableModel.addRow(new Object[]{
-                    requestId, date, requestText, status, "Under review"
+                    requestId, date, subjectDescription + " - " + requestText, status, "Under review"
                 });
                 requestTableModel.fireTableDataChanged();
 
+                // Clear form
                 requestTextArea.setText("");
+                requestTypeComboBox.setSelectedIndex(0);
+                updateSubjectDropdowns();
+                
                 showSuccessDialog("Request Submitted", "Request submitted successfully with ID: " + requestId);
                 
                 System.out.println("Request submitted successfully: " + requestId);
@@ -1116,6 +1328,58 @@ public class student_dashboard extends JFrame {
             System.err.println("Error sending request: " + e.getMessage());
             showErrorDialog("Request Error", "Error processing request: " + e.getMessage());
         }
+    }
+
+    /**
+     * Create subject description for display in table
+     */
+    private String createSubjectDescription(String requestType, String fromSubjectId, String toSubjectId) {
+        try {
+            Map<String, String[]> subjectMap = getSubjectMapFromFunction();
+            
+            if ("Add".equals(requestType)) {
+                String[] subjectData = subjectMap.get(toSubjectId);
+                if (subjectData != null && subjectData.length >= 3) {
+                    return "Add " + subjectData[1] + " (" + subjectData[2] + ")";
+                }
+            } else if ("Drop".equals(requestType)) {
+                String[] subjectData = subjectMap.get(fromSubjectId);
+                if (subjectData != null && subjectData.length >= 3) {
+                    return "Drop " + subjectData[1] + " (" + subjectData[2] + ")";
+                }
+            } else if ("Change".equals(requestType)) {
+                String[] fromSubjectData = subjectMap.get(fromSubjectId);
+                String[] toSubjectData = subjectMap.get(toSubjectId);
+                if (fromSubjectData != null && toSubjectData != null && 
+                    fromSubjectData.length >= 3 && toSubjectData.length >= 3) {
+                    return "Change from " + fromSubjectData[1] + " (" + fromSubjectData[2] + ")" +
+                           " to " + toSubjectData[1] + " (" + toSubjectData[2] + ")";
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error creating subject description: " + e.getMessage());
+        }
+        return requestType + " request";
+    }
+
+    /**
+     * Find class ID for a given subject ID
+     */
+    private String findClassIdForSubject(String subjectId) {
+        try {
+            List<String> classes = function.readClasses();
+            for (String line : classes) {
+                if (line.trim().isEmpty()) continue;
+                
+                String[] parts = line.split(",");
+                if (parts.length >= 2 && parts[1].trim().equals(subjectId)) {
+                    return parts[0].trim();
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error finding class ID for subject " + subjectId + ": " + e.getMessage());
+        }
+        return "";
     }
 
     /**
@@ -1358,6 +1622,9 @@ public class student_dashboard extends JFrame {
             if (initializeStudentData()) {
                 loadAllData();
                 refreshAllTables();
+                
+                // Refresh subject dropdowns with updated data
+                updateSubjectDropdowns();
                 
                 // Update welcome label
                 welcomeLabel.setText("Welcome, " + displayName + " (Student)");
