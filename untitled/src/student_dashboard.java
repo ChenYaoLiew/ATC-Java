@@ -1,7 +1,6 @@
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
@@ -30,24 +29,273 @@ public class student_dashboard extends JFrame {
 
     // Profile Tab
     private JTextField profileNameField;
-    private JTextField profileContactField;
+    private JTextField profileEmailField;
+    private JTextField profilePhoneField;
+    private JTextField profileAddressField;
+    private JTextField profileContactField; // For compatibility
+    private JTextField profileUsernameField; // Read-only username display
+    private JPasswordField currentPasswordField;
+    private JPasswordField newPasswordField;
+    private JPasswordField confirmPasswordField;
     private JButton updateProfileButton;
+    private JButton changePasswordButton;
+    private JButton refreshDataButton;
 
+    // Student Data
     private final String currentUser;
-    private final String currentStudentId;
-    private final String displayName;
-    private static final String DATA_DIR = "data";
-    private static int nextRequestId = 1009; // Start after existing requests
+    private String currentStudentId;
+    private String displayName;
+    private Map<String, String> studentProfile;
+    private List<String> enrolledSubjects;
+    private double totalFees;
+    private double paidAmount;
+    private double balanceAmount;
 
     public student_dashboard(String userName) {
         this.currentUser = userName;
-        this.currentStudentId = findStudentId(userName);
-        this.displayName = findDisplayName(userName);
         
+        // Initialize student data using function.java with comprehensive error handling
+        if (!initializeStudentData()) {
+            JOptionPane.showMessageDialog(null, 
+                "Failed to initialize student data. Please contact administrator.", 
+                "Initialization Error", JOptionPane.ERROR_MESSAGE);
+            System.exit(1);
+        }
+        
+        // Initialize GUI
         initializeGUI();
-        loadAllData();
+        
+        // Show the window
+        setVisible(true);
+        
+        // Load all data after GUI is visible with error handling
+        SwingUtilities.invokeLater(() -> {
+            try {
+                loadAllData();
+                refreshAllTables();
+                System.out.println("Student dashboard initialized successfully for: " + displayName);
+            } catch (Exception e) {
+                System.err.println("Error during data loading: " + e.getMessage());
+                showErrorDialog("Data Loading Error", "Some data may not be displayed correctly.");
+            }
+        });
     }
 
+    /**
+     * Initialize student data using function.java methods with comprehensive validation
+     */
+    private boolean initializeStudentData() {
+        try {
+            // Ensure all required files exist using function.java utilities
+            if (!validateRequiredFiles()) {
+                return false;
+            }
+
+            // Find student ID from users.txt using function.java
+            currentStudentId = findStudentId(currentUser);
+            if (currentStudentId == null) {
+                showErrorDialog("Student Not Found", 
+                    "Student not found for username: " + currentUser);
+                return false;
+            }
+
+            // Load student data components
+            if (!loadStudentProfile() || !loadEnrolledSubjects() || !loadFinancialData()) {
+                return false;
+            }
+            
+            // Set display name with fallback
+            displayName = studentProfile.getOrDefault("name", currentUser);
+            System.out.println("DEBUG: Student data initialized - ID: " + currentStudentId + ", Name: " + displayName);
+            
+            return true;
+        } catch (Exception e) {
+            System.err.println("Error initializing student data: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Validate that all required files exist using function.java utilities
+     */
+    private boolean validateRequiredFiles() {
+        String[] requiredFiles = {
+            "users.txt", "students.txt", "subject.txt", "classes.txt", 
+            "schedule.txt", "student_subjects.txt", "student_balances.txt", 
+            "subject_requests.txt", "payments.txt"
+        };
+        
+        boolean allFilesValid = true;
+        for (String fileName : requiredFiles) {
+            if (!function.fileExists(fileName)) {
+                System.out.println("Creating missing file: " + fileName);
+                if (!function.createFileIfNotExists(fileName)) {
+                    System.err.println("Failed to create required file: " + fileName);
+                    allFilesValid = false;
+                } else {
+                    System.out.println("Successfully created file: " + fileName);
+                }
+            }
+        }
+        
+        return allFilesValid;
+    }
+
+    /**
+     * Find student ID using function.java with enhanced validation
+     */
+    private String findStudentId(String username) {
+        try {
+            List<String> users = function.readUsers();
+            if (users.isEmpty()) {
+                System.err.println("No users found in users.txt");
+                return null;
+            }
+            
+            for (String line : users) {
+                if (line.trim().isEmpty()) continue;
+                
+                String[] parts = line.split(",");
+                if (parts.length >= 4) {
+                    String userId = parts[0].trim();
+                    String userName = parts[1].trim();
+                    String userRole = parts[3].trim();
+                    
+                    if (userName.equals(username) && userRole.equals("student")) {
+                        System.out.println("Found student ID: " + userId + " for username: " + username);
+                        return userId;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error finding student ID: " + e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Load student profile using function.java with enhanced error handling
+     */
+    private boolean loadStudentProfile() {
+        try {
+            studentProfile = new HashMap<>();
+            List<String> students = function.readStudents();
+            
+            if (students.isEmpty()) {
+                System.err.println("No students found in students.txt");
+                return false;
+            }
+            
+            System.out.println("DEBUG: Loading profile for student ID: " + currentStudentId);
+            
+            for (String line : students) {
+                if (line.trim().isEmpty()) continue;
+                
+                String[] parts = line.split(",");
+                if (parts.length >= 9 && parts[0].trim().equals(currentStudentId)) {
+                    studentProfile.put("id", parts[0].trim());
+                    studentProfile.put("name", parts[1].trim());
+                    studentProfile.put("ic", parts[2].trim());
+                    studentProfile.put("email", parts[3].trim());
+                    studentProfile.put("phone", parts[4].trim());
+                    studentProfile.put("address", parts[5].trim());
+                    studentProfile.put("regDate", parts[6].trim());
+                    studentProfile.put("level", parts[7].trim());
+                    studentProfile.put("status", parts[8].trim());
+                    
+                    System.out.println("DEBUG: Student profile loaded successfully");
+                    return true;
+                }
+            }
+            
+            System.err.println("Student profile not found for ID: " + currentStudentId);
+            return false;
+            
+        } catch (Exception e) {
+            System.err.println("Error loading student profile: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Load enrolled subjects using function.java with validation
+     */
+    private boolean loadEnrolledSubjects() {
+        try {
+            enrolledSubjects = new ArrayList<>();
+            List<String> studentSubjects = function.readStudentSubjects();
+            
+            System.out.println("DEBUG: Loading enrolled subjects for student ID: " + currentStudentId);
+            
+            for (String line : studentSubjects) {
+                if (line.trim().isEmpty()) continue;
+                
+                String[] parts = line.split(",");
+                if (parts.length >= 2 && parts[0].trim().equals(currentStudentId)) {
+                    String subjectId = parts[1].trim();
+                    if (!subjectId.isEmpty()) {
+                        enrolledSubjects.add(subjectId);
+                        System.out.println("DEBUG: Added subject: " + subjectId);
+                    }
+                }
+            }
+            
+            System.out.println("DEBUG: Total enrolled subjects: " + enrolledSubjects.size());
+            return true;
+            
+        } catch (Exception e) {
+            System.err.println("Error loading enrolled subjects: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Load financial data using function.java with enhanced error handling
+     */
+    private boolean loadFinancialData() {
+        try {
+            totalFees = 0.0;
+            paidAmount = 0.0;
+            balanceAmount = 0.0;
+            
+            List<String> balances = function.readStudentBalances();
+            
+            for (String line : balances) {
+                if (line.trim().isEmpty()) continue;
+                
+                String[] parts = line.split(",");
+                if (parts.length >= 4 && parts[0].trim().equals(currentStudentId)) {
+                    try {
+                        totalFees = Double.parseDouble(parts[1].trim());
+                        paidAmount = Double.parseDouble(parts[2].trim());
+                        balanceAmount = Double.parseDouble(parts[3].trim());
+                        System.out.println("DEBUG: Financial data loaded - Total: " + totalFees + 
+                                         ", Paid: " + paidAmount + ", Balance: " + balanceAmount);
+                        return true;
+                    } catch (NumberFormatException e) {
+                        System.err.println("Error parsing financial data: " + e.getMessage());
+                        return false;
+                    }
+                }
+            }
+            
+            // If no balance record exists, create one using function.java
+            String balanceData = currentStudentId + ",0.0,0.0,0.0";
+            if (function.addStudentBalance(balanceData)) {
+                System.out.println("Created new balance record for student: " + currentStudentId);
+            }
+            
+            return true;
+            
+        } catch (Exception e) {
+            System.err.println("Error loading financial data: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Initialize the GUI components
+     */
     private void initializeGUI() {
         setTitle("Student Dashboard - " + currentUser);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -58,59 +306,88 @@ public class student_dashboard extends JFrame {
         mainPanel = new JPanel(new BorderLayout(15, 15));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         mainPanel.setBackground(new Color(0xF8F9FA));
-        mainPanel.setOpaque(true);
 
-        // Modern header
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBackground(new Color(0x343A40));
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(25, 30, 25, 30));
-        headerPanel.setOpaque(true);
+        // Create header
+        createHeader();
+        
+        // Create tabbed pane
+        createTabbedPane();
 
-        welcomeLabel = new JLabel("Welcome, " + displayName + " (Student)", SwingConstants.CENTER);
-        welcomeLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
-        welcomeLabel.setForeground(Color.WHITE);
-
-        logoutButton = new JButton("Logout");
-        logoutButton.setBackground(new Color(220, 53, 69));
-        logoutButton.setForeground(Color.WHITE);
-        logoutButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        logoutButton.setBorder(BorderFactory.createEmptyBorder(12, 24, 12, 24));
-        logoutButton.setFocusPainted(false);
-        logoutButton.setOpaque(true);
-        logoutButton.setBorderPainted(false);
-        logoutButton.addActionListener(e -> {
-            dispose();
-            SwingUtilities.invokeLater(() -> new main_page().setVisible(true));
-        });
-
-        headerPanel.add(welcomeLabel, BorderLayout.CENTER);
-        headerPanel.add(logoutButton, BorderLayout.EAST);
-
-        // Modern tabbed pane
-        tabbedPane = new JTabbedPane();
-        tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        tabbedPane.setBackground(new Color(0xF8F9FA));
-        tabbedPane.addTab("Schedule", createSchedulePanel());
-        tabbedPane.addTab("Requests", createRequestPanel());
-        tabbedPane.addTab("Payments", createPaymentPanel());
-        tabbedPane.addTab("Profile", createProfilePanel());
-
-        mainPanel.add(headerPanel, BorderLayout.NORTH);
+        // Add components to main panel
+        mainPanel.add(createHeaderPanel(), BorderLayout.NORTH);
         mainPanel.add(tabbedPane, BorderLayout.CENTER);
 
         setContentPane(mainPanel);
     }
 
+    /**
+     * Create the header panel with refresh functionality
+     */
+    private JPanel createHeaderPanel() {
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(new Color(0x343A40));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(25, 30, 25, 30));
+
+        welcomeLabel = new JLabel("Welcome, " + displayName + " (Student)", SwingConstants.CENTER);
+        welcomeLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        welcomeLabel.setForeground(Color.WHITE);
+
+        // Button panel for logout and refresh
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.setBackground(new Color(0x343A40));
+        
+        refreshDataButton = new JButton("Refresh Data");
+        styleButton(refreshDataButton, new Color(23, 162, 184));
+        refreshDataButton.addActionListener(e -> refreshAllData());
+        
+        logoutButton = new JButton("Logout");
+        styleButton(logoutButton, new Color(220, 53, 69));
+        logoutButton.addActionListener(e -> logout());
+
+        buttonPanel.add(refreshDataButton);
+        buttonPanel.add(logoutButton);
+
+        headerPanel.add(welcomeLabel, BorderLayout.CENTER);
+        headerPanel.add(buttonPanel, BorderLayout.EAST);
+
+        return headerPanel;
+    }
+
+    /**
+     * Create header components
+     */
+    private void createHeader() {
+        // Header components are created in createHeaderPanel()
+    }
+
+    /**
+     * Create the tabbed pane with all tabs
+     */
+    private void createTabbedPane() {
+        tabbedPane = new JTabbedPane();
+        tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        tabbedPane.setBackground(new Color(0xF8F9FA));
+        
+        // Add all tabs
+        tabbedPane.addTab("Schedule", createSchedulePanel());
+        tabbedPane.addTab("Requests", createRequestPanel());
+        tabbedPane.addTab("Payments", createPaymentPanel());
+        tabbedPane.addTab("Profile", createProfilePanel());
+    }
+
+    /**
+     * Create the schedule panel
+     */
     private JPanel createSchedulePanel() {
         JPanel panel = new JPanel(new BorderLayout(15, 15));
         panel.setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
         panel.setBackground(new Color(0xF8F9FA));
-        panel.setOpaque(true);
 
         JLabel titleLabel = new JLabel("Weekly Class Schedule");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
         titleLabel.setForeground(new Color(0x343A40));
 
+        // Create schedule table
         scheduleTableModel = new DefaultTableModel(
             new String[]{"Day", "Time", "Subject", "Room", "Tutor"}, 0
         ) {
@@ -119,16 +396,9 @@ public class student_dashboard extends JFrame {
                 return false;
             }
         };
+        
         scheduleTable = new JTable(scheduleTableModel);
-        scheduleTable.setRowHeight(35);
-        scheduleTable.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        scheduleTable.getTableHeader().setBackground(new Color(0x007BFF));
-        scheduleTable.getTableHeader().setForeground(Color.WHITE);
-        scheduleTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
-        scheduleTable.setShowGrid(true);
-        scheduleTable.setGridColor(new Color(0xDEE2E6));
-        scheduleTable.setSelectionBackground(new Color(0xE7F3FF));
-        scheduleTable.setBackground(Color.WHITE);
+        setupTable(scheduleTable);
 
         JScrollPane scrollPane = new JScrollPane(scheduleTable);
         scrollPane.setPreferredSize(new Dimension(0, 400));
@@ -140,16 +410,32 @@ public class student_dashboard extends JFrame {
         return panel;
     }
 
+    /**
+     * Create the request panel
+     */
     private JPanel createRequestPanel() {
         JPanel panel = new JPanel(new BorderLayout(15, 15));
         panel.setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
         panel.setBackground(new Color(0xF8F9FA));
-        panel.setOpaque(true);
 
         // Top section for new requests
+        JPanel topPanel = createNewRequestPanel();
+        
+        // Bottom section for request history
+        JPanel bottomPanel = createRequestHistoryPanel();
+
+        panel.add(topPanel, BorderLayout.NORTH);
+        panel.add(bottomPanel, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    /**
+     * Create new request panel
+     */
+    private JPanel createNewRequestPanel() {
         JPanel topPanel = new JPanel(new BorderLayout(15, 15));
         topPanel.setBackground(new Color(0xF8F9FA));
-        topPanel.setOpaque(true);
         
         JLabel titleLabel = new JLabel("Submit New Subject Request");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
@@ -166,25 +452,13 @@ public class student_dashboard extends JFrame {
 
         JPanel buttonPanel = new JPanel(new FlowLayout());
         buttonPanel.setBackground(new Color(0xF8F9FA));
-        buttonPanel.setOpaque(true);
+        
         sendRequestButton = new JButton("Send Request");
-        sendRequestButton.setBackground(new Color(40, 167, 69));
-        sendRequestButton.setForeground(Color.WHITE);
-        sendRequestButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        sendRequestButton.setBorder(BorderFactory.createEmptyBorder(12, 24, 12, 24));
-        sendRequestButton.setFocusPainted(false);
-        sendRequestButton.setOpaque(true);
-        sendRequestButton.setBorderPainted(false);
+        styleButton(sendRequestButton, new Color(40, 167, 69));
         sendRequestButton.addActionListener(e -> sendRequest());
 
         deleteRequestButton = new JButton("Delete Selected");
-        deleteRequestButton.setBackground(new Color(220, 53, 69));
-        deleteRequestButton.setForeground(Color.WHITE);
-        deleteRequestButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        deleteRequestButton.setBorder(BorderFactory.createEmptyBorder(12, 24, 12, 24));
-        deleteRequestButton.setFocusPainted(false);
-        deleteRequestButton.setOpaque(true);
-        deleteRequestButton.setBorderPainted(false);
+        styleButton(deleteRequestButton, new Color(220, 53, 69));
         deleteRequestButton.addActionListener(e -> deleteRequest());
 
         buttonPanel.add(sendRequestButton);
@@ -194,10 +468,15 @@ public class student_dashboard extends JFrame {
         topPanel.add(new JScrollPane(requestTextArea), BorderLayout.CENTER);
         topPanel.add(buttonPanel, BorderLayout.SOUTH);
 
-        // Bottom section for request history
+        return topPanel;
+    }
+
+    /**
+     * Create request history panel
+     */
+    private JPanel createRequestHistoryPanel() {
         JPanel bottomPanel = new JPanel(new BorderLayout(15, 15));
         bottomPanel.setBackground(new Color(0xF8F9FA));
-        bottomPanel.setOpaque(true);
         
         JLabel historyLabel = new JLabel("Request History");
         historyLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
@@ -211,16 +490,9 @@ public class student_dashboard extends JFrame {
                 return false;
             }
         };
+        
         requestTable = new JTable(requestTableModel);
-        requestTable.setRowHeight(35);
-        requestTable.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        requestTable.getTableHeader().setBackground(new Color(0x007BFF));
-        requestTable.getTableHeader().setForeground(Color.WHITE);
-        requestTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
-        requestTable.setShowGrid(true);
-        requestTable.setGridColor(new Color(0xDEE2E6));
-        requestTable.setSelectionBackground(new Color(0xE7F3FF));
-        requestTable.setBackground(Color.WHITE);
+        setupTable(requestTable);
 
         JScrollPane requestScrollPane = new JScrollPane(requestTable);
         requestScrollPane.setPreferredSize(new Dimension(0, 200));
@@ -229,17 +501,16 @@ public class student_dashboard extends JFrame {
         bottomPanel.add(historyLabel, BorderLayout.NORTH);
         bottomPanel.add(requestScrollPane, BorderLayout.CENTER);
 
-        panel.add(topPanel, BorderLayout.NORTH);
-        panel.add(bottomPanel, BorderLayout.CENTER);
-
-        return panel;
+        return bottomPanel;
     }
 
+    /**
+     * Create the payment panel
+     */
     private JPanel createPaymentPanel() {
         JPanel panel = new JPanel(new BorderLayout(15, 15));
         panel.setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
         panel.setBackground(new Color(0xF8F9FA));
-        panel.setOpaque(true);
 
         JLabel titleLabel = new JLabel("Payment History & Balance");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
@@ -257,16 +528,9 @@ public class student_dashboard extends JFrame {
                 return false;
             }
         };
+        
         paymentTable = new JTable(paymentTableModel);
-        paymentTable.setRowHeight(35);
-        paymentTable.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        paymentTable.getTableHeader().setBackground(new Color(0x007BFF));
-        paymentTable.getTableHeader().setForeground(Color.WHITE);
-        paymentTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
-        paymentTable.setShowGrid(true);
-        paymentTable.setGridColor(new Color(0xDEE2E6));
-        paymentTable.setSelectionBackground(new Color(0xE7F3FF));
-        paymentTable.setBackground(Color.WHITE);
+        setupTable(paymentTable);
 
         JScrollPane scrollPane = new JScrollPane(paymentTable);
         scrollPane.setPreferredSize(new Dimension(0, 300));
@@ -279,66 +543,19 @@ public class student_dashboard extends JFrame {
         return panel;
     }
 
+    /**
+     * Create the profile panel
+     */
     private JPanel createProfilePanel() {
         JPanel panel = new JPanel(new BorderLayout(15, 15));
         panel.setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
         panel.setBackground(new Color(0xF8F9FA));
-        panel.setOpaque(true);
 
         JLabel titleLabel = new JLabel("Profile Information");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
         titleLabel.setForeground(new Color(0x343A40));
 
-        JPanel formPanel = new JPanel(new GridBagLayout());
-        formPanel.setBackground(new Color(0xF8F9FA));
-        formPanel.setOpaque(true);
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(15, 15, 15, 15);
-        gbc.anchor = GridBagConstraints.WEST;
-
-        // Name field
-        gbc.gridx = 0; gbc.gridy = 0;
-        JLabel nameLabel = new JLabel("Name:");
-        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        nameLabel.setForeground(new Color(0x343A40));
-        formPanel.add(nameLabel, gbc);
-        gbc.gridx = 1;
-        profileNameField = new JTextField(25);
-        profileNameField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        profileNameField.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(0xDEE2E6)),
-            BorderFactory.createEmptyBorder(10, 10, 10, 10)
-        ));
-        formPanel.add(profileNameField, gbc);
-
-        // Contact field
-        gbc.gridx = 0; gbc.gridy = 1;
-        JLabel contactLabel = new JLabel("Contact:");
-        contactLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        contactLabel.setForeground(new Color(0x343A40));
-        formPanel.add(contactLabel, gbc);
-        gbc.gridx = 1;
-        profileContactField = new JTextField(25);
-        profileContactField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        profileContactField.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(0xDEE2E6)),
-            BorderFactory.createEmptyBorder(10, 10, 10, 10)
-        ));
-        formPanel.add(profileContactField, gbc);
-
-        // Update button
-        gbc.gridx = 1; gbc.gridy = 2;
-        gbc.insets = new Insets(25, 15, 15, 15);
-        updateProfileButton = new JButton("Update Profile");
-        updateProfileButton.setBackground(new Color(0, 123, 255));
-        updateProfileButton.setForeground(Color.WHITE);
-        updateProfileButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        updateProfileButton.setBorder(BorderFactory.createEmptyBorder(12, 24, 12, 24));
-        updateProfileButton.setFocusPainted(false);
-        updateProfileButton.setOpaque(true);
-        updateProfileButton.setBorderPainted(false);
-        updateProfileButton.addActionListener(e -> updateProfile());
-        formPanel.add(updateProfileButton, gbc);
+        JPanel formPanel = createProfileForm();
 
         panel.add(titleLabel, BorderLayout.NORTH);
         panel.add(formPanel, BorderLayout.CENTER);
@@ -346,139 +563,252 @@ public class student_dashboard extends JFrame {
         return panel;
     }
 
+    /**
+     * Create profile form
+     */
+    private JPanel createProfileForm() {
+        JPanel mainPanel = new JPanel(new BorderLayout(20, 20));
+        mainPanel.setBackground(new Color(0xF8F9FA));
+
+        // Create profile information panel
+        JPanel profilePanel = createBasicProfilePanel();
+        
+        // Create password change panel
+        JPanel passwordPanel = createPasswordChangePanel();
+
+        mainPanel.add(profilePanel, BorderLayout.WEST);
+        mainPanel.add(passwordPanel, BorderLayout.EAST);
+
+        return mainPanel;
+    }
+
+    /**
+     * Create basic profile information panel
+     */
+    private JPanel createBasicProfilePanel() {
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        formPanel.setBackground(new Color(0xF8F9FA));
+        formPanel.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(new Color(0xDEE2E6), 2),
+            "Profile Information",
+            0, 0, new Font("Segoe UI", Font.BOLD, 16),
+            new Color(0x343A40)
+        ));
+        
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(15, 15, 15, 15);
+        gbc.anchor = GridBagConstraints.WEST;
+
+        // Username field (read-only)
+        addFormField(formPanel, gbc, "Username:", profileUsernameField = new JTextField(25), 0);
+        profileUsernameField.setEditable(false);
+        profileUsernameField.setBackground(new Color(0xE9ECEF));
+        profileUsernameField.setForeground(new Color(0x6C757D));
+
+        // Name field
+        addFormField(formPanel, gbc, "Name:", profileNameField = new JTextField(25), 1);
+        
+        // Email field
+        addFormField(formPanel, gbc, "Email:", profileEmailField = new JTextField(25), 2);
+        
+        // Phone field
+        addFormField(formPanel, gbc, "Phone:", profilePhoneField = new JTextField(25), 3);
+        
+        // Address field
+        addFormField(formPanel, gbc, "Address:", profileAddressField = new JTextField(25), 4);
+
+        // Initialize compatibility field (not displayed)
+        profileContactField = new JTextField(25);
+
+        // Update profile button
+        gbc.gridx = 1; gbc.gridy = 5;
+        gbc.insets = new Insets(25, 15, 15, 15);
+        updateProfileButton = new JButton("Update Profile");
+        styleButton(updateProfileButton, new Color(0, 123, 255));
+        updateProfileButton.addActionListener(e -> updateProfile());
+        formPanel.add(updateProfileButton, gbc);
+
+        return formPanel;
+    }
+
+    /**
+     * Create password change panel
+     */
+    private JPanel createPasswordChangePanel() {
+        JPanel passwordPanel = new JPanel(new GridBagLayout());
+        passwordPanel.setBackground(new Color(0xF8F9FA));
+        passwordPanel.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(new Color(0xDEE2E6), 2),
+            "Change Password",
+            0, 0, new Font("Segoe UI", Font.BOLD, 16),
+            new Color(0x343A40)
+        ));
+        
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(15, 15, 15, 15);
+        gbc.anchor = GridBagConstraints.WEST;
+
+        // Current password field
+        addPasswordField(passwordPanel, gbc, "Current Password:", currentPasswordField = new JPasswordField(25), 0);
+        
+        // New password field
+        addPasswordField(passwordPanel, gbc, "New Password:", newPasswordField = new JPasswordField(25), 1);
+        
+        // Confirm password field
+        addPasswordField(passwordPanel, gbc, "Confirm Password:", confirmPasswordField = new JPasswordField(25), 2);
+
+        // Password requirements label
+        gbc.gridx = 0; gbc.gridy = 3;
+        gbc.gridwidth = 2;
+        gbc.insets = new Insets(5, 15, 15, 15);
+        JLabel requirementsLabel = new JLabel("<html><small>Password must be at least 6 characters long</small></html>");
+        requirementsLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+        requirementsLabel.setForeground(new Color(0x6C757D));
+        passwordPanel.add(requirementsLabel, gbc);
+
+        // Change password button
+        gbc.gridx = 1; gbc.gridy = 4;
+        gbc.gridwidth = 1;
+        gbc.insets = new Insets(25, 15, 15, 15);
+        changePasswordButton = new JButton("Change Password");
+        styleButton(changePasswordButton, new Color(220, 53, 69));
+        changePasswordButton.addActionListener(e -> changePassword());
+        passwordPanel.add(changePasswordButton, gbc);
+
+        return passwordPanel;
+    }
+
+    /**
+     * Add form field helper method
+     */
+    private void addFormField(JPanel panel, GridBagConstraints gbc, String labelText, JTextField field, int row) {
+        gbc.gridx = 0; gbc.gridy = row;
+        JLabel label = new JLabel(labelText);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        label.setForeground(new Color(0x343A40));
+        panel.add(label, gbc);
+        
+        gbc.gridx = 1;
+        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        field.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(0xDEE2E6)),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+        panel.add(field, gbc);
+    }
+
+    /**
+     * Add password field helper method
+     */
+    private void addPasswordField(JPanel panel, GridBagConstraints gbc, String labelText, JPasswordField field, int row) {
+        gbc.gridx = 0; gbc.gridy = row;
+        JLabel label = new JLabel(labelText);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        label.setForeground(new Color(0x343A40));
+        panel.add(label, gbc);
+        
+        gbc.gridx = 1;
+        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        field.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(0xDEE2E6)),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+        panel.add(field, gbc);
+    }
+
+    /**
+     * Setup table appearance
+     */
+    private void setupTable(JTable table) {
+        table.setRowHeight(35);
+        table.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        table.getTableHeader().setBackground(new Color(0x007BFF));
+        table.getTableHeader().setForeground(Color.WHITE);
+        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
+        table.setShowGrid(true);
+        table.setGridColor(new Color(0xDEE2E6));
+        table.setSelectionBackground(new Color(0xE7F3FF));
+        table.setBackground(Color.WHITE);
+    }
+
+    /**
+     * Style button helper method
+     */
+    private void styleButton(JButton button, Color backgroundColor) {
+        button.setBackground(backgroundColor);
+        button.setForeground(Color.WHITE);
+        button.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        button.setBorder(BorderFactory.createEmptyBorder(12, 24, 12, 24));
+        button.setFocusPainted(false);
+        button.setOpaque(true);
+        button.setBorderPainted(false);
+    }
+
+    /**
+     * Load all data for all tabs using function.java with enhanced error handling
+     */
     private void loadAllData() {
-        if (currentStudentId == null) {
-            JOptionPane.showMessageDialog(this, 
-                "Student ID not found for user: " + currentUser, 
-                "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        loadScheduleData();
-        loadRequestData();
-        loadPaymentData();
-        loadProfileData();
-    }
-
-    private String findStudentId(String username) {
-        String filePath = DATA_DIR + "/users.txt";
-        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split(",");
-                if (parts.length >= 5 && parts[1].trim().equals(username)) {
-                    return parts[0].trim();
-                }
+        try {
+            // Validate files before loading
+            if (!validateRequiredFiles()) {
+                showErrorDialog("File Validation Error", "Some required files are missing or corrupted.");
+                return;
             }
-        } catch (IOException e) {
-            System.err.println("Error reading users file: " + e.getMessage());
+            
+            loadScheduleData();
+            loadRequestData();
+            loadPaymentData();
+            loadProfileData();
+            
+            System.out.println("All data loaded successfully for student: " + currentStudentId);
+        } catch (Exception e) {
+            System.err.println("Error loading data: " + e.getMessage());
+            showErrorDialog("Data Loading Error", 
+                "Error loading some data: " + e.getMessage() + "\nPlease try refreshing or contact administrator.");
         }
-        return null;
     }
 
-    private String findDisplayName(String username) {
-        String filePath = DATA_DIR + "/users.txt";
-        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split(",");
-                if (parts.length >= 5 && parts[1].trim().equals(username)) {
-                    return parts[4].trim(); // Return the display name (5th field)
-                }
-            }
-        } catch (IOException e) {
-            System.err.println("Error reading users file: " + e.getMessage());
-        }
-        return username; // Fallback to username if display name not found
-    }
-
+    /**
+     * Enhanced schedule data loading using function.java with better error handling
+     */
     private void loadScheduleData() {
         scheduleTableModel.setRowCount(0);
         
         try {
-            // Load student's enrolled subjects
-            List<String> enrolledSubjects = new ArrayList<>();
-            try (BufferedReader reader = new BufferedReader(new FileReader(DATA_DIR + "/student_subjects.txt"))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    String[] parts = line.split(",");
-                    if (parts.length >= 2 && parts[0].trim().equals(currentStudentId)) {
-                        enrolledSubjects.add(parts[1].trim());
-                    }
-                }
+            if (enrolledSubjects.isEmpty()) {
+                System.out.println("No enrolled subjects found for student: " + currentStudentId);
+                return;
             }
+            
+            // Get all required data using function.java
+            Map<String, String[]> subjectMap = getSubjectMapFromFunction();
+            Map<String, String[]> classMap = getClassMapFromFunction();
+            Map<String, String[]> scheduleMap = getScheduleMapFromFunction();
+            Map<String, String> tutorMap = getTutorMapFromFunction();
 
-            // Load subject details
-            Map<String, String[]> subjectMap = new HashMap<>();
-            try (BufferedReader reader = new BufferedReader(new FileReader(DATA_DIR + "/subject.txt"))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    String[] parts = line.split(",");
-                    if (parts.length >= 3) {
-                        subjectMap.put(parts[0].trim(), parts);
-                    }
-                }
-            }
-
-            // Load class details
-            Map<String, String[]> classMap = new HashMap<>();
-            try (BufferedReader reader = new BufferedReader(new FileReader(DATA_DIR + "/classes.txt"))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    String[] parts = line.split(",");
-                    if (parts.length >= 4) {
-                        classMap.put(parts[0].trim(), parts);
-                    }
-                }
-            }
-
-            // Load schedule details
-            Map<String, String[]> scheduleMap = new HashMap<>();
-            try (BufferedReader reader = new BufferedReader(new FileReader(DATA_DIR + "/schedule.txt"))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    String[] parts = line.split(",");
-                    if (parts.length >= 6) {
-                        scheduleMap.put(parts[1].trim(), parts); // Key by class_id
-                    }
-                }
-            }
-
-            // Load tutor details
-            Map<String, String> tutorMap = new HashMap<>();
-            try (BufferedReader reader = new BufferedReader(new FileReader(DATA_DIR + "/users.txt"))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    String[] parts = line.split(",");
-                    if (parts.length >= 5) {
-                        tutorMap.put(parts[0].trim(), parts[4].trim());
-                    }
-                }
-            }
-
-            // Build schedule table
+            // Build schedule table with enhanced validation
             for (String subjectId : enrolledSubjects) {
                 String[] subjectData = subjectMap.get(subjectId);
-                if (subjectData != null) {
+                if (subjectData != null && subjectData.length >= 3) {
                     String subjectName = subjectData[1].trim();
                     String level = subjectData[2].trim();
                     
                     // Find corresponding class
                     for (String[] classData : classMap.values()) {
-                        if (classData[1].trim().equals(subjectId)) {
+                        if (classData.length >= 3 && classData[1].trim().equals(subjectId)) {
                             String classId = classData[0].trim();
                             String tutorId = classData[2].trim();
                             
                             // Find schedule for this class
                             String[] scheduleData = scheduleMap.get(classId);
-                            if (scheduleData != null) {
+                            if (scheduleData != null && scheduleData.length >= 6) {
                                 String day = scheduleData[2].trim();
                                 String startTime = scheduleData[3].trim();
                                 String endTime = scheduleData[4].trim();
                                 String room = scheduleData[5].trim();
                                 
                                 String tutorName = tutorMap.getOrDefault(tutorId, "Unknown");
-                                String timeSlot = formatTime(startTime) + " - " + formatTime(endTime);
+                                String timeSlot = formatTimeWithValidation(startTime) + " - " + formatTimeWithValidation(endTime);
                                 
                                 scheduleTableModel.addRow(new Object[]{
                                     day, timeSlot, subjectName + " (" + level + ")", room, tutorName
@@ -488,184 +818,247 @@ public class student_dashboard extends JFrame {
                     }
                 }
             }
-
-        } catch (IOException e) {
+            
+        } catch (Exception e) {
             System.err.println("Error loading schedule data: " + e.getMessage());
-            JOptionPane.showMessageDialog(this, "Error loading schedule data: " + e.getMessage(), 
-                "Error", JOptionPane.ERROR_MESSAGE);
+            showErrorDialog("Schedule Error", "Error loading schedule data: " + e.getMessage());
         }
     }
 
+    /**
+     * Enhanced subject mapping using function.java
+     */
+    private Map<String, String[]> getSubjectMapFromFunction() {
+        Map<String, String[]> subjectMap = new HashMap<>();
+        try {
+            List<String> subjects = function.readSubjects();
+            
+            for (String line : subjects) {
+                if (line.trim().isEmpty()) continue;
+                
+                String[] parts = line.split(",");
+                if (parts.length >= 3) {
+                    subjectMap.put(parts[0].trim(), parts);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error creating subject map: " + e.getMessage());
+        }
+        return subjectMap;
+    }
+
+    /**
+     * Enhanced class mapping using function.java
+     */
+    private Map<String, String[]> getClassMapFromFunction() {
+        Map<String, String[]> classMap = new HashMap<>();
+        try {
+            List<String> classes = function.readClasses();
+            
+            for (String line : classes) {
+                if (line.trim().isEmpty()) continue;
+                
+                String[] parts = line.split(",");
+                if (parts.length >= 4) {
+                    classMap.put(parts[0].trim(), parts);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error creating class map: " + e.getMessage());
+        }
+        return classMap;
+    }
+
+    /**
+     * Enhanced schedule mapping using function.java
+     */
+    private Map<String, String[]> getScheduleMapFromFunction() {
+        Map<String, String[]> scheduleMap = new HashMap<>();
+        try {
+            List<String> schedules = function.readSchedules();
+            
+            for (String line : schedules) {
+                if (line.trim().isEmpty()) continue;
+                
+                String[] parts = line.split(",");
+                if (parts.length >= 6) {
+                    scheduleMap.put(parts[1].trim(), parts); // Key by class_id
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error creating schedule map: " + e.getMessage());
+        }
+        return scheduleMap;
+    }
+
+    /**
+     * Enhanced tutor mapping using function.java
+     */
+    private Map<String, String> getTutorMapFromFunction() {
+        Map<String, String> tutorMap = new HashMap<>();
+        try {
+            List<String> users = function.readUsers();
+            
+            for (String line : users) {
+                if (line.trim().isEmpty()) continue;
+                
+                String[] parts = line.split(",");
+                if (parts.length >= 5) {
+                    tutorMap.put(parts[0].trim(), parts[4].trim());
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error creating tutor map: " + e.getMessage());
+        }
+        return tutorMap;
+    }
+
+    /**
+     * Enhanced request data loading using function.java
+     */
     private void loadRequestData() {
         requestTableModel.setRowCount(0);
         
-        try (BufferedReader reader = new BufferedReader(new FileReader(DATA_DIR + "/subject_requests.txt"))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
+        try {
+            List<String> requests = function.readSubjectRequests();
+            
+            for (String line : requests) {
+                if (line.trim().isEmpty()) continue;
+                
                 String[] parts = line.split(",");
-                if (parts.length >= 9 && parts[1].trim().equals(currentStudentId)) {
+                if (parts.length >= 8 && parts[1].trim().equals(currentStudentId)) {
                     String requestId = parts[0].trim();
-                    String reason = parts[5].trim().replace("\"", "");
-                    String date = parts[6].trim();
-                    String status = parts[7].trim();
-                    String response = parts.length > 9 ? parts[9].trim() : "Under review";
+                    String reason = parts.length > 5 ? parts[5].trim().replace("\"", "") : "No description";
+                    String date = parts.length > 6 ? parts[6].trim() : "Unknown";
+                    String status = parts.length > 7 ? parts[7].trim() : "Pending";
+                    String response = parts.length > 8 ? parts[8].trim() : "Under review";
                     
                     requestTableModel.addRow(new Object[]{
                         requestId, date, reason, status, response
                     });
                 }
             }
-        } catch (IOException e) {
+            
+        } catch (Exception e) {
             System.err.println("Error loading request data: " + e.getMessage());
-            JOptionPane.showMessageDialog(this, "Error loading request data: " + e.getMessage(), 
-                "Error", JOptionPane.ERROR_MESSAGE);
+            showErrorDialog("Request Error", "Error loading request data: " + e.getMessage());
         }
     }
 
+    /**
+     * Enhanced payment data loading using function.java
+     */
     private void loadPaymentData() {
         paymentTableModel.setRowCount(0);
         
-        try (BufferedReader reader = new BufferedReader(new FileReader(DATA_DIR + "/payments.txt"))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
+        try {
+            List<String> payments = function.readPayments();
+            
+            for (String line : payments) {
+                if (line.trim().isEmpty()) continue;
+                
                 String[] parts = line.split(",");
                 if (parts.length >= 9 && parts[1].trim().equals(currentStudentId)) {
-                    String dateTime = parts[5].trim();
-                    String date = dateTime.split(" ")[0];
-                    String amount = parts[3].trim();
-                    String method = parts[4].trim();
-                    String status = parts[8].trim();
-                    String receiptId = parts[7].trim();
+                    String dateTime = parts.length > 5 ? parts[5].trim() : "Unknown";
+                    String date = dateTime.contains(" ") ? dateTime.split(" ")[0] : dateTime;
+                    String amount = parts.length > 3 ? parts[3].trim() : "0.00";
+                    String method = parts.length > 4 ? parts[4].trim() : "Unknown";
+                    String status = parts.length > 8 ? parts[8].trim() : "Unknown";
+                    String receiptId = parts.length > 7 ? parts[7].trim() : "N/A";
                     
                     paymentTableModel.addRow(new Object[]{
                         date, amount, method, status, receiptId
                     });
                 }
             }
-        } catch (IOException e) {
-            System.err.println("Error loading payment data: " + e.getMessage());
-            JOptionPane.showMessageDialog(this, "Error loading payment data: " + e.getMessage(), 
-                "Error", JOptionPane.ERROR_MESSAGE);
-        }
-
-        // Update balance
-        updateBalanceStatus();
-    }
-
-    private void loadProfileData() {
-        try (BufferedReader reader = new BufferedReader(new FileReader(DATA_DIR + "/students.txt"))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split(",");
-                if (parts.length >= 5 && parts[0].trim().equals(currentStudentId)) {
-                    profileNameField.setText(parts[1].trim());
-                    profileContactField.setText(parts[4].trim());
-                    break;
-                }
-            }
-        } catch (IOException e) {
-            System.err.println("Error loading profile data: " + e.getMessage());
-            JOptionPane.showMessageDialog(this, "Error loading profile data: " + e.getMessage(), 
-                "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void updateBalanceStatus() {
-        try (BufferedReader reader = new BufferedReader(new FileReader(DATA_DIR + "/student_balances.txt"))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split(",");
-                if (parts.length >= 4 && parts[0].trim().equals(currentStudentId)) {
-                    String outstanding = parts[3].trim();
-                    paymentStatusLabel.setText("Outstanding Balance: RM " + outstanding);
-                    return;
-                }
-            }
-        } catch (IOException e) {
-            System.err.println("Error loading balance data: " + e.getMessage());
-            JOptionPane.showMessageDialog(this, "Error loading balance data: " + e.getMessage(), 
-                "Error", JOptionPane.ERROR_MESSAGE);
-        }
-        paymentStatusLabel.setText("Balance information not available");
-    }
-
-    private void sendRequest() {
-        String requestText = requestTextArea.getText().trim();
-        if (requestText.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please enter your request.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        try {
-            String requestId = "REQ" + String.format("%03d", nextRequestId++);
-            String date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
-            String status = "Pending";
-
-            // Save to file
-            try (FileWriter writer = new FileWriter(DATA_DIR + "/subject_requests.txt", true)) {
-                writer.write(requestId + "," + currentStudentId + ",Add,,,\"" + requestText + "\"," + 
-                           date + "," + status + ",,Under review\n");
-            }
-
-            // Add to table
-            requestTableModel.addRow(new Object[]{
-                requestId, date, requestText, status, "Under review"
-            });
-
-            requestTextArea.setText("");
-            JOptionPane.showMessageDialog(this, "Request submitted successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
-
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "Error saving request: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void deleteRequest() {
-        int selectedRow = requestTable.getSelectedRow();
-        if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Please select a request to delete.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        String status = (String) requestTableModel.getValueAt(selectedRow, 3);
-        if (!"Pending".equals(status)) {
-            JOptionPane.showMessageDialog(this, "Only pending requests can be deleted.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        requestTableModel.removeRow(selectedRow);
-        JOptionPane.showMessageDialog(this, "Request deleted successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    private void updateProfile() {
-        String name = profileNameField.getText().trim();
-        String contact = profileContactField.getText().trim();
-        
-        if (name.isEmpty() || contact.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please fill in all fields.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        // Validate contact format (basic validation)
-        if (!contact.matches("^[0-9+\\-\\s()]+$")) {
-            JOptionPane.showMessageDialog(this, "Please enter a valid contact number.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        try {
-            // Here you would typically update the students.txt file with the new information
-            // For now, we'll just show a success message
-            JOptionPane.showMessageDialog(this, "Profile updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+            
+            updatePaymentStatus();
+            
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error updating profile: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            System.err.println("Error loading payment data: " + e.getMessage());
+            showErrorDialog("Payment Error", "Error loading payment data: " + e.getMessage());
         }
     }
 
-    private String formatTime(String time24) {
+    /**
+     * Load profile data using function.java
+     */
+    private void loadProfileData() {
         try {
+            profileUsernameField.setText(currentUser); // Set username as read-only
+            profileNameField.setText(studentProfile.getOrDefault("name", ""));
+            profileEmailField.setText(studentProfile.getOrDefault("email", ""));
+            profilePhoneField.setText(studentProfile.getOrDefault("phone", ""));
+            profileAddressField.setText(studentProfile.getOrDefault("address", ""));
+            profileContactField.setText(studentProfile.getOrDefault("phone", "")); // For form compatibility
+        } catch (Exception e) {
+            System.err.println("Error loading profile data: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Update payment status display
+     */
+    private void updatePaymentStatus() {
+        try {
+            if (balanceAmount > 0) {
+                paymentStatusLabel.setText(String.format(
+                    "Total Fees: RM%.2f | Paid: RM%.2f | Outstanding: RM%.2f", 
+                    totalFees, paidAmount, balanceAmount));
+                paymentStatusLabel.setForeground(new Color(0xDC3545)); // Red for outstanding
+            } else {
+                paymentStatusLabel.setText(String.format(
+                    "Total Fees: RM%.2f | Paid: RM%.2f | Status: PAID", 
+                    totalFees, paidAmount));
+                paymentStatusLabel.setForeground(new Color(0x28A745)); // Green for paid
+            }
+        } catch (Exception e) {
+            paymentStatusLabel.setText("Balance information not available");
+            paymentStatusLabel.setForeground(new Color(0x6C757D)); // Gray for unknown
+        }
+    }
+
+    /**
+     * Refresh table display
+     */
+    private void refreshTable(JTable table, DefaultTableModel model) {
+        SwingUtilities.invokeLater(() -> {
+            model.fireTableDataChanged();
+            table.repaint();
+            table.revalidate();
+        });
+    }
+
+    /**
+     * Refresh all tables
+     */
+    private void refreshAllTables() {
+        refreshTable(scheduleTable, scheduleTableModel);
+        refreshTable(requestTable, requestTableModel);
+        refreshTable(paymentTable, paymentTableModel);
+    }
+
+    /**
+     * Enhanced time formatting with validation
+     */
+    private String formatTimeWithValidation(String time24) {
+        try {
+            if (time24 == null || time24.trim().isEmpty()) {
+                return "N/A";
+            }
+            
             String[] parts = time24.split(":");
-            int hour = Integer.parseInt(parts[0]);
-            int minute = Integer.parseInt(parts[1]);
+            if (parts.length < 2) {
+                return time24; // Return as-is if format is unexpected
+            }
+            
+            int hour = Integer.parseInt(parts[0].trim());
+            int minute = Integer.parseInt(parts[1].trim());
+            
+            // Validate time ranges
+            if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+                return time24; // Return as-is if invalid
+            }
             
             String ampm = hour >= 12 ? "PM" : "AM";
             if (hour > 12) hour -= 12;
@@ -673,13 +1066,351 @@ public class student_dashboard extends JFrame {
             
             return String.format("%d:%02d %s", hour, minute, ampm);
         } catch (Exception e) {
-            return time24;
+            System.err.println("Error formatting time '" + time24 + "': " + e.getMessage());
+            return time24; // Return original if parsing fails
         }
     }
 
+    /**
+     * Enhanced request sending using function.java with comprehensive validation
+     */
+    private void sendRequest() {
+        try {
+            String requestText = requestTextArea.getText().trim();
+            if (requestText.isEmpty()) {
+                showErrorDialog("Input Error", "Please enter your request.");
+                return;
+            }
+
+            if (requestText.length() > 500) {
+                showErrorDialog("Input Error", "Request text is too long. Please limit to 500 characters.");
+                return;
+            }
+
+            // Generate unique request ID using function.java
+            String requestId = function.generateRequestId();
+            String date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+            String status = "Pending";
+
+            // Create request data with proper formatting
+            String requestData = String.format("%s,%s,Add,,,\"%s\",%s,%s,,Under review",
+                                             requestId, currentStudentId, requestText, date, status);
+
+            boolean success = function.addSubjectRequest(requestData);
+            
+            if (success) {
+                // Add to table
+                requestTableModel.addRow(new Object[]{
+                    requestId, date, requestText, status, "Under review"
+                });
+                requestTableModel.fireTableDataChanged();
+
+                requestTextArea.setText("");
+                showSuccessDialog("Request Submitted", "Request submitted successfully with ID: " + requestId);
+                
+                System.out.println("Request submitted successfully: " + requestId);
+            } else {
+                showErrorDialog("Submission Error", "Error saving request. Please try again.");
+            }
+        } catch (Exception e) {
+            System.err.println("Error sending request: " + e.getMessage());
+            showErrorDialog("Request Error", "Error processing request: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Enhanced request deletion using function.java with validation
+     */
+    private void deleteRequest() {
+        try {
+            int selectedRow = requestTable.getSelectedRow();
+            if (selectedRow == -1) {
+                showErrorDialog("Selection Error", "Please select a request to delete.");
+                return;
+            }
+
+            String status = (String) requestTableModel.getValueAt(selectedRow, 3);
+            if (!"Pending".equals(status)) {
+                showErrorDialog("Action Not Allowed", "Only pending requests can be deleted.");
+                return;
+            }
+
+            String requestId = (String) requestTableModel.getValueAt(selectedRow, 0);
+            
+            // Confirm deletion
+            int confirm = JOptionPane.showConfirmDialog(this,
+                "Are you sure you want to delete request " + requestId + "?",
+                "Confirm Deletion",
+                JOptionPane.YES_NO_OPTION);
+                
+            if (confirm != JOptionPane.YES_OPTION) {
+                return;
+            }
+            
+            // Find and delete the request from file using function.java
+            List<String> requests = function.readSubjectRequests();
+            
+            for (String line : requests) {
+                String[] parts = line.split(",");
+                if (parts.length >= 1 && parts[0].trim().equals(requestId)) {
+                    boolean success = function.deleteSubjectRequest(line);
+                    if (success) {
+                        requestTableModel.removeRow(selectedRow);
+                        requestTableModel.fireTableDataChanged();
+                        showSuccessDialog("Request Deleted", "Request deleted successfully!");
+                        System.out.println("Request deleted successfully: " + requestId);
+                    } else {
+                        showErrorDialog("Deletion Error", "Error deleting request. Please try again.");
+                    }
+                    return;
+                }
+            }
+            
+            showErrorDialog("Request Not Found", "Request not found in file.");
+                
+        } catch (Exception e) {
+            System.err.println("Error deleting request: " + e.getMessage());
+            showErrorDialog("Deletion Error", "Error deleting request: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Enhanced profile update using function.java with comprehensive validation
+     */
+    private void updateProfile() {
+        try {
+            String name = profileNameField.getText().trim();
+            String email = profileEmailField.getText().trim();
+            String phone = profilePhoneField.getText().trim();
+            String address = profileAddressField.getText().trim();
+            
+            // Comprehensive validation
+            if (name.isEmpty() || email.isEmpty() || phone.isEmpty() || address.isEmpty()) {
+                showErrorDialog("Validation Error", "Please fill in all fields.");
+                return;
+            }
+
+            // Validate name (only letters and spaces, reasonable length)
+            if (!name.matches("^[a-zA-Z\\s]{2,50}$")) {
+                showErrorDialog("Validation Error", "Name should contain only letters and spaces (2-50 characters).");
+                return;
+            }
+
+            // Validate email format
+            if (!email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+                showErrorDialog("Validation Error", "Please enter a valid email address.");
+                return;
+            }
+
+            // Validate phone format (allow various international formats)
+            if (!phone.matches("^[0-9+\\-\\s()]{8,20}$")) {
+                showErrorDialog("Validation Error", "Please enter a valid phone number (8-20 characters).");
+                return;
+            }
+
+            // Validate address length
+            if (address.length() < 10 || address.length() > 200) {
+                showErrorDialog("Validation Error", "Address should be between 10-200 characters.");
+                return;
+            }
+
+            // Update student profile using function.java
+            List<String> students = function.readStudents();
+            
+            for (String line : students) {
+                String[] parts = line.split(",");
+                if (parts.length >= 9 && parts[0].trim().equals(currentStudentId)) {
+                    // Create updated line: StudentID,Name,IC,Email,Phone,Address,RegDate,Level,Status
+                    String updatedLine = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s",
+                                                     parts[0], name, parts[2], email, phone, 
+                                                     address, parts[6], parts[7], parts[8]);
+                    
+                    boolean success = function.updateStudent(line, updatedLine);
+                    if (success) {
+                        // Update local data
+                        studentProfile.put("name", name);
+                        studentProfile.put("email", email);
+                        studentProfile.put("phone", phone);
+                        studentProfile.put("address", address);
+                        
+                        // Update display name
+                        displayName = name;
+                        welcomeLabel.setText("Welcome, " + displayName + " (Student)");
+                        
+                        showSuccessDialog("Profile Updated", "Profile updated successfully!");
+                        System.out.println("Profile updated successfully for student: " + currentStudentId);
+                    } else {
+                        showErrorDialog("Update Error", "Error updating profile. Please try again.");
+                    }
+                    return;
+                }
+            }
+            
+            showErrorDialog("Student Not Found", "Student record not found.");
+                
+        } catch (Exception e) {
+            System.err.println("Error updating profile: " + e.getMessage());
+            showErrorDialog("Update Error", "Error updating profile: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Enhanced password change using function.java with comprehensive validation
+     */
+    private void changePassword() {
+        try {
+            String currentPassword = new String(currentPasswordField.getPassword()).trim();
+            String newPassword = new String(newPasswordField.getPassword()).trim();
+            String confirmPassword = new String(confirmPasswordField.getPassword()).trim();
+            
+            // Validate input fields
+            if (currentPassword.isEmpty() || newPassword.isEmpty() || confirmPassword.isEmpty()) {
+                showErrorDialog("Validation Error", "Please fill in all password fields.");
+                return;
+            }
+
+            // Validate new password matches confirmation
+            if (!newPassword.equals(confirmPassword)) {
+                showErrorDialog("Validation Error", "New password and confirmation do not match.");
+                clearPasswordFields();
+                return;
+            }
+
+            // Validate password length and complexity
+            if (newPassword.length() < 6) {
+                showErrorDialog("Validation Error", "New password must be at least 6 characters long.");
+                clearPasswordFields();
+                return;
+            }
+
+            // Verify current password by checking users.txt
+            List<String> users = function.readUsers();
+            String currentUserData = null;
+            boolean currentPasswordValid = false;
+            
+            for (String line : users) {
+                if (line.trim().isEmpty()) continue;
+                
+                String[] parts = line.split(",");
+                if (parts.length >= 5 && parts[0].trim().equals(currentStudentId)) {
+                    currentUserData = line;
+                    String storedPassword = parts[2].trim();
+                    if (storedPassword.equals(currentPassword)) {
+                        currentPasswordValid = true;
+                    }
+                    break;
+                }
+            }
+
+            if (!currentPasswordValid) {
+                showErrorDialog("Authentication Error", "Current password is incorrect.");
+                clearPasswordFields();
+                return;
+            }
+
+            if (currentUserData == null) {
+                showErrorDialog("User Error", "User account not found.");
+                clearPasswordFields();
+                return;
+            }
+
+            // Update password in users.txt using function.java
+            String[] parts = currentUserData.split(",");
+            String updatedUserData = String.format("%s,%s,%s,%s,%s",
+                                                 parts[0], parts[1], newPassword, parts[3], parts[4]);
+
+            boolean success = function.updateUser(currentUserData, updatedUserData);
+            
+            if (success) {
+                clearPasswordFields();
+                showSuccessDialog("Password Changed", "Password changed successfully!");
+                System.out.println("Password updated successfully for student: " + currentStudentId);
+            } else {
+                showErrorDialog("Update Error", "Error updating password. Please try again.");
+                clearPasswordFields();
+            }
+                
+        } catch (Exception e) {
+            System.err.println("Error changing password: " + e.getMessage());
+            showErrorDialog("Password Change Error", "Error changing password: " + e.getMessage());
+            clearPasswordFields();
+        }
+    }
+
+    /**
+     * Clear all password fields for security
+     */
+    private void clearPasswordFields() {
+        currentPasswordField.setText("");
+        newPasswordField.setText("");
+        confirmPasswordField.setText("");
+    }
+
+    /**
+     * Refresh all data using function.java
+     */
+    private void refreshAllData() {
+        try {
+            // Show loading indicator
+            setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+            
+            // Re-initialize and reload all data
+            if (initializeStudentData()) {
+                loadAllData();
+                refreshAllTables();
+                
+                // Update welcome label
+                welcomeLabel.setText("Welcome, " + displayName + " (Student)");
+                
+                showSuccessDialog("Data Refreshed", "All data has been refreshed successfully!");
+                System.out.println("Data refreshed successfully for student: " + currentStudentId);
+            } else {
+                showErrorDialog("Refresh Error", "Failed to refresh data. Please try again.");
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Error refreshing data: " + e.getMessage());
+            showErrorDialog("Refresh Error", "Error refreshing data: " + e.getMessage());
+        } finally {
+            setCursor(Cursor.getDefaultCursor());
+        }
+    }
+
+    /**
+     * Enhanced error dialog
+     */
+    private void showErrorDialog(String title, String message) {
+        JOptionPane.showMessageDialog(this, message, title, JOptionPane.ERROR_MESSAGE);
+    }
+
+    /**
+     * Enhanced success dialog
+     */
+    private void showSuccessDialog(String title, String message) {
+        JOptionPane.showMessageDialog(this, message, title, JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /**
+     * Logout and return to main page
+     */
+    private void logout() {
+        dispose();
+        SwingUtilities.invokeLater(() -> {
+            try {
+                new main_page().setVisible(true);
+            } catch (Exception e) {
+                System.err.println("Error returning to main page: " + e.getMessage());
+                System.exit(0);
+            }
+        });
+    }
+
+    /**
+     * Main method for testing
+     */
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            new student_dashboard("student").setVisible(true);
+            new student_dashboard("student");
         });
     }
 }
