@@ -46,6 +46,12 @@ public class receptionist_dashboard extends JFrame {
     private JTextField profileContactField;
     private JButton updateProfileButton;
     
+    // Subject Requests Tab
+    private JTable requestsTable;
+    private JButton approveRequestButton;
+    private JButton declineRequestButton;
+    private DefaultTableModel requestsTableModel;
+    
     private String currentUser;
     private Map<String, String> subjectMap = new HashMap<>();
     private Map<String, String> levelSubjectMap = new HashMap<>();
@@ -128,8 +134,10 @@ public class receptionist_dashboard extends JFrame {
         styleButton(acceptPaymentButton, new Color(40, 167, 69)); // Green
         styleButton(generateReceiptButton, new Color(0, 123, 255)); // Blue
         styleButton(updateProfileButton, new Color(0, 123, 255)); // Blue
+        styleButton(approveRequestButton, new Color(40, 167, 69)); // Green
+        styleButton(declineRequestButton, new Color(220, 53, 69)); // Red
         
-        // Style table
+        // Style tables
         if (studentsTable != null) {
             studentsTable.setRowHeight(35);
             studentsTable.setFont(new Font("Segoe UI", Font.PLAIN, 14));
@@ -141,6 +149,20 @@ public class receptionist_dashboard extends JFrame {
             studentsTable.setSelectionBackground(new Color(0xE7F3FF));
             studentsTable.setBackground(Color.WHITE);
         }
+        
+        if (requestsTable != null) {
+            requestsTable.setRowHeight(35);
+            requestsTable.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            requestsTable.getTableHeader().setBackground(new Color(0x007BFF));
+            requestsTable.getTableHeader().setForeground(Color.WHITE);
+            requestsTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
+            requestsTable.setShowGrid(true);
+            requestsTable.setGridColor(new Color(0xDEE2E6));
+            requestsTable.setSelectionBackground(new Color(0xE7F3FF));
+            requestsTable.setBackground(Color.WHITE);
+        }
+        
+
     }
     
     private void initializeComponents() {
@@ -172,6 +194,20 @@ public class receptionist_dashboard extends JFrame {
         // Initialize Student Selection ComboBox
         paymentStudentCombo.setModel(new DefaultComboBoxModel<>());
         refreshStudentCombo();
+        
+        // Initialize Subject Requests Table
+        String[] requestColumnNames = {"Request ID", "Student ID", "Student Name", "Type", "Subject", "Old Subject", "Reason", "Date", "Status"};
+        requestsTableModel = new DefaultTableModel(requestColumnNames, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false; // Make table read-only
+            }
+        };
+        requestsTable.setModel(requestsTableModel);
+        requestsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        
+        // Load subject requests
+        loadSubjectRequests();
     }
     
     private void setupEventListeners() {
@@ -195,6 +231,10 @@ public class receptionist_dashboard extends JFrame {
         
         // Update Profile button
         updateProfileButton.addActionListener(e -> updateProfile());
+        
+        // Subject Requests buttons
+        approveRequestButton.addActionListener(e -> approveRequest());
+        declineRequestButton.addActionListener(e -> declineRequest());
     }
     
     
@@ -815,6 +855,238 @@ public class receptionist_dashboard extends JFrame {
                                             "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
+        }
+    }
+    
+    private void loadSubjectRequests() {
+        // Clear existing data
+        requestsTableModel.setRowCount(0);
+        
+        // Load subject requests from file
+        List<String> requestLines = function.readSubjectRequests();
+        
+        for (String line : requestLines) {
+            String[] parts = line.split(",");
+            if (parts.length >= 9) {
+                String requestId = parts[0].trim();
+                String studentId = parts[1].trim();
+                String requestType = parts[2].trim();
+                String subjectId = parts[3].trim();
+                String oldSubjectId = parts[4].trim();
+                String reason = parts[5].trim();
+                String requestDate = parts[6].trim();
+                String status = parts[7].trim();
+                
+                // Only show pending requests
+                if (!"Pending".equals(status)) {
+                    continue; // Skip approved, rejected, or other status requests
+                }
+                
+                // Get student name
+                String studentName = getStudentName(studentId);
+                
+                // Get subject name
+                String subjectName = getSubjectName(subjectId);
+                String oldSubjectName = oldSubjectId.isEmpty() ? "" : getSubjectName(oldSubjectId);
+                
+                // Add to table
+                requestsTableModel.addRow(new Object[]{
+                    requestId, studentId, studentName, requestType, subjectName, 
+                    oldSubjectName, reason, requestDate, status
+                });
+            }
+        }
+    }
+    
+    private String getStudentName(String studentId) {
+        List<String> studentLines = function.readStudents();
+        for (String line : studentLines) {
+            String[] parts = line.split(",");
+            if (parts.length >= 2 && parts[0].trim().equals(studentId)) {
+                return parts[1].trim();
+            }
+        }
+        return "Unknown";
+    }
+    
+    private String getSubjectName(String subjectId) {
+        return subjectMap.getOrDefault(subjectId, subjectId);
+    }
+    
+    private String[] getRequestData(String requestId) {
+        List<String> requestLines = function.readSubjectRequests();
+        for (String line : requestLines) {
+            String[] parts = line.split(",");
+            if (parts.length >= 9 && parts[0].trim().equals(requestId)) {
+                return parts;
+            }
+        }
+        return new String[0];
+    }
+    
+    private void approveRequest() {
+        int selectedRow = requestsTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Please select a request to approve.", 
+                                        "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        String requestId = (String) requestsTableModel.getValueAt(selectedRow, 0);
+        String studentId = (String) requestsTableModel.getValueAt(selectedRow, 1);
+        String requestType = (String) requestsTableModel.getValueAt(selectedRow, 3);
+        String subjectDisplay = (String) requestsTableModel.getValueAt(selectedRow, 4);
+        String oldSubjectDisplay = (String) requestsTableModel.getValueAt(selectedRow, 5);
+        String status = (String) requestsTableModel.getValueAt(selectedRow, 8);
+        
+        // Extract subject IDs from the original request data
+        String[] requestData = getRequestData(requestId);
+        String subjectId = requestData[3];
+        String oldSubjectId = requestData[4];
+        
+        // Check if request is already processed
+        if (!"Pending".equals(status)) {
+            JOptionPane.showMessageDialog(this, "This request has already been processed.", 
+                                        "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        // Get comments from user
+        String comments = JOptionPane.showInputDialog(this, 
+            "Enter approval comments (optional):", 
+            "Approve Request", 
+            JOptionPane.QUESTION_MESSAGE);
+        
+        if (comments == null) {
+            return; // User cancelled
+        }
+        
+        if (comments.trim().isEmpty()) {
+            comments = "Request approved";
+        }
+        
+        // Process the request based on type
+        boolean success = false;
+        if ("Add".equals(requestType)) {
+            success = processAddRequest(studentId, subjectId);
+        } else if ("Drop".equals(requestType)) {
+            success = processDropRequest(studentId, subjectId);
+        } else if ("Change".equals(requestType)) {
+            success = processChangeRequest(studentId, oldSubjectId, subjectId);
+        }
+        
+        if (success) {
+            // Update request status in file
+            updateRequestStatus(requestId, "Approved", comments);
+            
+            // Refresh tables
+            loadSubjectRequests();
+            loadStudentData();
+            
+            JOptionPane.showMessageDialog(this, "Request approved successfully!", 
+                                        "Success", JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(this, "Failed to process request.", 
+                                        "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    private void declineRequest() {
+        int selectedRow = requestsTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Please select a request to decline.", 
+                                        "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        String requestId = (String) requestsTableModel.getValueAt(selectedRow, 0);
+        String status = (String) requestsTableModel.getValueAt(selectedRow, 8);
+        
+        // Check if request is already processed
+        if (!"Pending".equals(status)) {
+            JOptionPane.showMessageDialog(this, "This request has already been processed.", 
+                                        "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        // Get decline reason from user
+        String reason = JOptionPane.showInputDialog(this, 
+            "Enter reason for declining:", 
+            "Decline Request", 
+            JOptionPane.QUESTION_MESSAGE);
+        
+        if (reason == null) {
+            return; // User cancelled
+        }
+        
+        if (reason.trim().isEmpty()) {
+            reason = "Request declined";
+        }
+        
+        // Update request status in file
+        updateRequestStatus(requestId, "Rejected", reason);
+        
+        // Refresh table
+        loadSubjectRequests();
+        
+        JOptionPane.showMessageDialog(this, "Request declined successfully!", 
+                                    "Success", JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    private boolean processAddRequest(String studentId, String subjectId) {
+        // Add subject to student_subjects.txt
+        String studentSubjectData = studentId + "," + subjectId;
+        return function.addStudentSubject(studentSubjectData);
+    }
+    
+    private boolean processDropRequest(String studentId, String subjectId) {
+        // Remove subject from student_subjects.txt
+        String studentSubjectData = studentId + "," + subjectId;
+        return function.deleteStudentSubject(studentSubjectData);
+    }
+    
+    private boolean processChangeRequest(String studentId, String oldSubjectId, String newSubjectId) {
+        // Remove old subject and add new subject
+        String oldData = studentId + "," + oldSubjectId;
+        String newData = studentId + "," + newSubjectId;
+        
+        boolean removeSuccess = function.deleteStudentSubject(oldData);
+        boolean addSuccess = function.addStudentSubject(newData);
+        
+        return removeSuccess && addSuccess;
+    }
+    
+    private void updateRequestStatus(String requestId, String status, String comments) {
+        // Read all requests
+        List<String> requestLines = function.readSubjectRequests();
+        List<String> updatedLines = new ArrayList<>();
+        
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        String currentDate = dateFormat.format(new Date());
+        
+        for (String line : requestLines) {
+            String[] parts = line.split(",");
+            if (parts.length >= 9 && parts[0].trim().equals(requestId)) {
+                // Update this request
+                // Format: RequestID,StudentID,RequestType,SubjectID,OldSubjectID,Reason,RequestDate,Status,ProcessedDate,Comments
+                String updatedLine = parts[0] + "," + parts[1] + "," + parts[2] + "," + parts[3] + "," + 
+                                   parts[4] + "," + parts[5] + "," + parts[6] + "," + status + "," + 
+                                   currentDate + "," + comments;
+                updatedLines.add(updatedLine);
+            } else {
+                updatedLines.add(line);
+            }
+        }
+        
+        // Clear and rewrite the file
+        // First delete all existing lines
+        for (String line : requestLines) {
+            function.deleteSubjectRequest(line);
+        }
+        
+        // Add updated lines
+        for (String line : updatedLines) {
+            function.addSubjectRequest(line);
         }
     }
     
