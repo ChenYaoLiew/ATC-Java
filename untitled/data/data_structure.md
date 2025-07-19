@@ -255,6 +255,65 @@ Students (1:1) → Student_Balances
 - Numeric fields (fees, amounts) should use decimal format with 2 decimal places
 - Status fields should use predefined values to ensure consistency
 
+---
+
+### 10. attendance.txt
+**Purpose**: Records student attendance for each class session.
+
+**Format**: `AttendanceID,StudentID,ClassID,Date,Status,MarkedBy,TimeMarked`
+
+**Fields**:
+- `AttendanceID` (String): Unique identifier for the attendance record
+- `StudentID` (String): Reference to students.txt StudentID
+- `ClassID` (String): Reference to classes.txt ClassID
+- `Date` (Date): Date of the class (YYYY-MM-DD)
+- `Status` (String): Attendance status (Present, Absent, Late)
+- `MarkedBy` (String): ID of tutor who marked attendance
+- `TimeMarked` (Time): Time when attendance was marked (HH:MM)
+
+**Example**:
+```
+ATT001,S001,CLS001,2024-01-15,Present,T001,09:05
+ATT002,S001,CLS004,2024-01-15,Late,T002,16:15
+```
+
+**Relationships**:
+- `StudentID` → students.txt
+- `ClassID` → classes.txt
+- `MarkedBy` → users.txt (where Role = "tutor")
+
+---
+
+### 11. messages.txt
+**Purpose**: Stores internal messages, announcements, and communications between system users.
+
+**Format**: `MessageID,SenderID,ReceiverID,MessageType,Subject,Content,DateTime,Status,Priority,ParentMessageID`
+
+**Fields**:
+- `MessageID` (String): Unique identifier for the message
+- `SenderID` (String): Reference to users.txt UserID of sender
+- `ReceiverID` (String): Reference to users.txt UserID of receiver (or special values like "ALL", "TUTORS", "STUDENTS")
+- `MessageType` (String): Type of message (Message, Announcement, Request, Reply)
+- `Subject` (String): Message subject line
+- `Content` (String): Message content body
+- `DateTime` (DateTime): Date and time sent (YYYY-MM-DD HH:MM:SS)
+- `Status` (String): Message status (Sent, Read, Deleted)
+- `Priority` (String): Message priority (Low, Medium, High)
+- `ParentMessageID` (String): Reference to parent message for replies (empty for original messages)
+
+**Example**:
+```
+MSG001,A001,ALL,Announcement,Holiday Notice,Center closed on Jan 26th,2024-01-20 10:00:00,Sent,High,
+MSG002,S001,T001,Message,Question,Could you clarify question 5?,2024-01-23 20:30:00,Sent,Low,
+```
+
+**Relationships**:
+- `SenderID` → users.txt
+- `ReceiverID` → users.txt (or special group identifiers)
+- `ParentMessageID` → messages.txt (for threaded conversations)
+
+---
+
 ### File Dependencies
 
 The files have the following dependency order for data integrity:
@@ -266,4 +325,6 @@ The files have the following dependency order for data integrity:
 6. `student_subjects.txt` (requires students and subjects)
 7. `student_balances.txt` (requires students)
 8. `payments.txt` (requires students and users)
-9. `subject_requests.txt` (requires students and classes) 
+9. `subject_requests.txt` (requires students and classes)
+10. `attendance.txt` (requires students, classes, and users)
+11. `messages.txt` (requires users) 

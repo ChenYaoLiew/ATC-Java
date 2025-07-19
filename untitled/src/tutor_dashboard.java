@@ -44,8 +44,12 @@ public class tutor_dashboard extends JFrame {
     private DefaultTableModel studentsTableModel;
     private DefaultTableModel scheduleTableModel;
     private DefaultTableModel subjectsTableModel;
+    private DefaultTableModel attendanceTableModel;
+    private DefaultTableModel messagesTableModel;
     private JTable scheduleTable;
     private JTable subjectsTable;
+    private JTable attendanceTable;
+    private JTable messagesTable;
     private static final String DATA_DIR = "data";
 
     public tutor_dashboard(Tutor tutor) {
@@ -103,6 +107,8 @@ public class tutor_dashboard extends JFrame {
         tabbedPane.addTab("📅 Schedule", createSchedulePanel());
         tabbedPane.addTab("📚 Classes", createClassesPanel());
         tabbedPane.addTab("📖 Subjects", createSubjectsPanel());
+        tabbedPane.addTab("✅ Attendance", createAttendancePanel());
+        tabbedPane.addTab("💬 Messages", createMessagingPanel());
         tabbedPane.addTab("👤 Profile", createProfilePanel());
 
         contentPane.add(headerPanel, BorderLayout.NORTH);
@@ -500,6 +506,210 @@ public class tutor_dashboard extends JFrame {
         return panel;
     }
 
+    private JPanel createAttendancePanel() {
+        JPanel panel = new JPanel(new BorderLayout(15, 15));
+        panel.setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
+        panel.setBackground(new Color(0xF8F9FA));
+        panel.setOpaque(true);
+
+        JLabel attendanceTitle = new JLabel("✅ Attendance Management");
+        attendanceTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        attendanceTitle.setForeground(new Color(0x343A40));
+
+        // Control panel for class selection and date
+        JPanel controlPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 10));
+        controlPanel.setBackground(new Color(0xF8F9FA));
+
+        // Class selection combo box
+        JComboBox<String> classComboBox = new JComboBox<>();
+        classComboBox.setPreferredSize(new Dimension(200, 35));
+        loadClassesForAttendance(classComboBox);
+
+        // Date selection
+        JTextField dateField = new JTextField(java.time.LocalDate.now().toString(), 10);
+        dateField.setPreferredSize(new Dimension(120, 35));
+
+        // Mark Attendance button
+        JButton markAttendanceButton = createStyledButton("📝 Mark Attendance", new Color(40, 167, 69));
+        markAttendanceButton.addActionListener(e -> {
+            String selectedClass = (String) classComboBox.getSelectedItem();
+            String selectedDate = dateField.getText();
+            if (selectedClass != null && !selectedDate.isEmpty()) {
+                showMarkAttendanceDialog(selectedClass, selectedDate);
+            } else {
+                showError("Error", "Please select a class and date");
+            }
+        });
+
+        // View Reports button
+        JButton viewReportsButton = createStyledButton("📊 View Reports", new Color(0, 123, 255));
+        viewReportsButton.addActionListener(e -> showAttendanceReports());
+
+        controlPanel.add(new JLabel("Class:"));
+        controlPanel.add(classComboBox);
+        controlPanel.add(new JLabel("Date:"));
+        controlPanel.add(dateField);
+        controlPanel.add(markAttendanceButton);
+        controlPanel.add(viewReportsButton);
+
+        // Attendance table
+        attendanceTableModel = new DefaultTableModel(
+                new String[]{"Date", "Class", "Student Name", "Status", "Time Marked"}, 0
+        ) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        attendanceTable = new JTable(attendanceTableModel);
+        styleTable(attendanceTable);
+
+        JScrollPane attendanceScrollPane = new JScrollPane(attendanceTable);
+        attendanceScrollPane.setBorder(BorderFactory.createEmptyBorder());
+
+        panel.add(attendanceTitle, BorderLayout.NORTH);
+        panel.add(controlPanel, BorderLayout.CENTER);
+        panel.add(attendanceScrollPane, BorderLayout.SOUTH);
+
+        // Load initial attendance data
+        loadAttendanceData();
+
+        return panel;
+    }
+
+    private JPanel createMessagingPanel() {
+        JPanel panel = new JPanel(new BorderLayout(15, 15));
+        panel.setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
+        panel.setBackground(new Color(0xF8F9FA));
+        panel.setOpaque(true);
+
+        JLabel messagingTitle = new JLabel("💬 Messages & Communication");
+        messagingTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        messagingTitle.setForeground(new Color(0x343A40));
+
+        // Create tabbed pane for Inbox, Sent, and Compose
+        JTabbedPane messagesTabbedPane = new JTabbedPane();
+        messagesTabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 12));
+
+        // Inbox Tab
+        JPanel inboxPanel = new JPanel(new BorderLayout(10, 10));
+        inboxPanel.setBackground(new Color(0xF8F9FA));
+
+        messagesTableModel = new DefaultTableModel(
+                new String[]{"From", "Date/Time", "Priority", "Status"}, 0
+        ) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        messagesTable = new JTable(messagesTableModel);
+        styleTable(messagesTable);
+        messagesTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    int row = messagesTable.getSelectedRow();
+                    if (row >= 0) {
+                        showMessageDialog(row);
+                    }
+                }
+            }
+        });
+
+        JScrollPane messagesScrollPane = new JScrollPane(messagesTable);
+        inboxPanel.add(messagesScrollPane, BorderLayout.CENTER);
+
+        // Buttons for inbox
+        JPanel inboxButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        inboxButtonPanel.setBackground(new Color(0xF8F9FA));
+        JButton refreshButton = createStyledButton("🔄 Refresh", new Color(108, 117, 125));
+        refreshButton.addActionListener(e -> loadMessagesData());
+        inboxButtonPanel.add(refreshButton);
+
+        inboxPanel.add(inboxButtonPanel, BorderLayout.SOUTH);
+
+        // Compose Tab
+        JPanel composePanel = createComposeMessagePanel();
+
+        messagesTabbedPane.addTab("📥 Inbox", inboxPanel);
+        messagesTabbedPane.addTab("✉️ Compose", composePanel);
+
+        panel.add(messagingTitle, BorderLayout.NORTH);
+        panel.add(messagesTabbedPane, BorderLayout.CENTER);
+
+        // Load initial messages data
+        loadMessagesData();
+
+        return panel;
+    }
+
+    private JPanel createComposeMessagePanel() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(new Color(0xF8F9FA));
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.anchor = GridBagConstraints.WEST;
+
+        // To field
+        gbc.gridx = 0; gbc.gridy = 0;
+        panel.add(new JLabel("To:"), gbc);
+        JComboBox<String> toComboBox = new JComboBox<>();
+        loadRecipientsForCompose(toComboBox);
+        toComboBox.setPreferredSize(new Dimension(300, 35));
+        gbc.gridx = 1;
+        panel.add(toComboBox, gbc);
+
+        // Priority field
+        gbc.gridx = 0; gbc.gridy = 1;
+        panel.add(new JLabel("Priority:"), gbc);
+        JComboBox<String> priorityComboBox = new JComboBox<>(new String[]{"Low", "Medium", "High"});
+        priorityComboBox.setPreferredSize(new Dimension(300, 35));
+        priorityComboBox.setSelectedItem("Medium");
+        gbc.gridx = 1;
+        panel.add(priorityComboBox, gbc);
+
+        // Message content area
+        gbc.gridx = 0; gbc.gridy = 2;
+        gbc.anchor = GridBagConstraints.NORTHWEST;
+        panel.add(new JLabel("Message:"), gbc);
+        JTextArea messageArea = new JTextArea(10, 25);
+        messageArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        messageArea.setLineWrap(true);
+        messageArea.setWrapStyleWord(true);
+        JScrollPane messageScrollPane = new JScrollPane(messageArea);
+        messageScrollPane.setPreferredSize(new Dimension(300, 200));
+        gbc.gridx = 1;
+        gbc.fill = GridBagConstraints.BOTH;
+        panel.add(messageScrollPane, gbc);
+
+        // Send button
+        gbc.gridx = 1; gbc.gridy = 3;
+        gbc.anchor = GridBagConstraints.EAST;
+        gbc.fill = GridBagConstraints.NONE;
+        JButton sendButton = createStyledButton("📤 Send Message", new Color(40, 167, 69));
+        sendButton.addActionListener(e -> {
+            String to = (String) toComboBox.getSelectedItem();
+            String priority = (String) priorityComboBox.getSelectedItem();
+            String content = messageArea.getText().trim();
+
+            if (to == null || content.isEmpty()) {
+                showError("Error", "Please fill in all required fields");
+                return;
+            }
+
+            sendMessage(to, "Message", content, priority);
+            messageArea.setText("");
+            toComboBox.setSelectedIndex(0);
+            priorityComboBox.setSelectedItem("Medium");
+        });
+        panel.add(sendButton, gbc);
+
+        return panel;
+    }
+
     private void showStudentsDialog(String subject, String level) {
         // Create dialog
         JDialog dialog = new JDialog(this, "Students in " + subject + " (" + level + ")", true);
@@ -697,9 +907,13 @@ public class tutor_dashboard extends JFrame {
         loadClassesData();
         loadScheduleData(scheduleTableModel);
         loadSubjectsData(subjectsTableModel);
+        if (attendanceTableModel != null) loadAttendanceData();
+        if (messagesTableModel != null) loadMessagesData();
         if (classesTable != null) classesTable.revalidate();
         if (scheduleTable != null) scheduleTable.revalidate();
         if (subjectsTable != null) subjectsTable.revalidate();
+        if (attendanceTable != null) attendanceTable.revalidate();
+        if (messagesTable != null) messagesTable.revalidate();
     }
 
     private void loadProfileData() {
@@ -1124,6 +1338,437 @@ public class tutor_dashboard extends JFrame {
         button.setOpaque(true);
         button.setBorderPainted(false);
         return button;
+    }
+
+    // Attendance Management Helper Methods
+    private void loadClassesForAttendance(JComboBox<String> classComboBox) {
+        classComboBox.removeAllItems();
+        try {
+            List<String> classLines = function.readClasses();
+            for (String line : classLines) {
+                String[] parts = line.split(",");
+                if (parts.length >= 3 && parts[2].trim().equals(currentTutor.getStudentId())) {
+                    // Get subject name from subject.txt
+                    String subjectId = parts[1].trim();
+                    String subjectName = getSubjectName(subjectId);
+                    String classId = parts[0].trim();
+                    classComboBox.addItem(classId + " - " + subjectName);
+                }
+            }
+        } catch (Exception e) {
+            showError("Error", "Failed to load classes: " + e.getMessage());
+        }
+    }
+
+    private String getSubjectName(String subjectId) {
+        try {
+            List<String> subjectLines = function.readSubjects();
+            for (String line : subjectLines) {
+                String[] parts = line.split(",");
+                if (parts.length >= 3 && parts[0].trim().equals(subjectId)) {
+                    return parts[1].trim() + " " + parts[2].trim();
+                }
+            }
+        } catch (Exception e) {
+            // Return subject ID if can't find name
+        }
+        return subjectId;
+    }
+
+    private void showMarkAttendanceDialog(String selectedClass, String selectedDate) {
+        String classId = selectedClass.split(" - ")[0];
+        
+        // Get students enrolled in this class
+        List<String[]> students = getStudentsInClass(classId);
+        
+        if (students.isEmpty()) {
+            showError("Error", "No students found for this class");
+            return;
+        }
+
+        // Create attendance marking dialog
+        JDialog dialog = new JDialog(this, "Mark Attendance - " + selectedDate, true);
+        dialog.setLayout(new BorderLayout(10, 10));
+        dialog.setSize(600, 400);
+        dialog.setLocationRelativeTo(this);
+
+        // Students table for attendance marking
+        DefaultTableModel attendanceMarkingModel = new DefaultTableModel(
+                new String[]{"Student ID", "Student Name", "Status"}, 0
+        ) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return column == 2; // Only Status is editable
+            }
+        };
+
+        JTable attendanceMarkingTable = new JTable(attendanceMarkingModel);
+        styleTable(attendanceMarkingTable);
+
+        // Add combo box editor for status column
+        JComboBox<String> statusComboBox = new JComboBox<>(new String[]{"Present", "Absent", "Late"});
+        attendanceMarkingTable.getColumnModel().getColumn(2).setCellEditor(new DefaultCellEditor(statusComboBox));
+
+        // Populate table with students
+        for (String[] student : students) {
+            attendanceMarkingModel.addRow(new Object[]{student[0], student[1], "Present"});
+        }
+
+        JScrollPane scrollPane = new JScrollPane(attendanceMarkingTable);
+        dialog.add(scrollPane, BorderLayout.CENTER);
+
+        // Buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        JButton saveButton = createStyledButton("💾 Save Attendance", new Color(40, 167, 69));
+        JButton cancelButton = createStyledButton("❌ Cancel", new Color(220, 53, 69));
+
+        saveButton.addActionListener(e -> {
+            saveAttendanceMarking(attendanceMarkingModel, classId, selectedDate);
+            dialog.dispose();
+            loadAttendanceData(); // Refresh the main attendance table
+        });
+
+        cancelButton.addActionListener(e -> dialog.dispose());
+
+        buttonPanel.add(saveButton);
+        buttonPanel.add(cancelButton);
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.setVisible(true);
+    }
+
+    private List<String[]> getStudentsInClass(String classId) {
+        List<String[]> students = new ArrayList<>();
+        try {
+            // Get subject ID from class
+            String subjectId = "";
+            List<String> classLines = function.readClasses();
+            for (String line : classLines) {
+                String[] parts = line.split(",");
+                if (parts.length >= 2 && parts[0].trim().equals(classId)) {
+                    subjectId = parts[1].trim();
+                    break;
+                }
+            }
+
+            if (!subjectId.isEmpty()) {
+                // Get students enrolled in this subject
+                List<String> enrolledStudentIds = new ArrayList<>();
+                List<String> studentSubjectLines = function.readStudentSubjects();
+                for (String line : studentSubjectLines) {
+                    String[] parts = line.split(",");
+                    if (parts.length >= 2 && parts[1].trim().equals(subjectId)) {
+                        enrolledStudentIds.add(parts[0].trim());
+                    }
+                }
+
+                // Get student details
+                List<String> studentLines = function.readStudents();
+                for (String line : studentLines) {
+                    String[] parts = line.split(",");
+                    if (parts.length >= 2 && enrolledStudentIds.contains(parts[0].trim())) {
+                        students.add(new String[]{parts[0].trim(), parts[1].trim()});
+                    }
+                }
+            }
+        } catch (Exception e) {
+            showError("Error", "Failed to load students: " + e.getMessage());
+        }
+        return students;
+    }
+
+    private void saveAttendanceMarking(DefaultTableModel model, String classId, String date) {
+        try {
+            for (int i = 0; i < model.getRowCount(); i++) {
+                String studentId = (String) model.getValueAt(i, 0);
+                String status = (String) model.getValueAt(i, 2);
+                
+                // Create attendance record
+                Attendance attendance = new Attendance(
+                    function.generateAttendanceId(),
+                    studentId,
+                    classId,
+                    date,
+                    status,
+                    currentTutor.getStudentId(),
+                    java.time.LocalTime.now().toString().substring(0, 5) // HH:MM format
+                );
+
+                function.addAttendance(attendance.toCsvString());
+            }
+            showSuccess("Attendance marked successfully!");
+        } catch (Exception e) {
+            showError("Error", "Failed to save attendance: " + e.getMessage());
+        }
+    }
+
+    private void showAttendanceReports() {
+        JDialog dialog = new JDialog(this, "Attendance Reports", true);
+        dialog.setLayout(new BorderLayout(10, 10));
+        dialog.setSize(800, 600);
+        dialog.setLocationRelativeTo(this);
+
+        // Summary statistics
+        JPanel summaryPanel = new JPanel(new GridLayout(1, 4, 10, 10));
+        summaryPanel.setBorder(BorderFactory.createTitledBorder("Summary Statistics"));
+        summaryPanel.setBackground(new Color(0xF8F9FA));
+
+        // Calculate statistics
+        List<Attendance> allAttendance = function.getAttendanceForTutor(currentTutor.getStudentId());
+        int totalRecords = allAttendance.size();
+        int presentCount = 0;
+        int absentCount = 0;
+        int lateCount = 0;
+
+        for (Attendance att : allAttendance) {
+            switch (att.getStatus()) {
+                case "Present": presentCount++; break;
+                case "Absent": absentCount++; break;
+                case "Late": lateCount++; break;
+            }
+        }
+
+        summaryPanel.add(createStatCard("Total Records", String.valueOf(totalRecords), Color.BLUE));
+        summaryPanel.add(createStatCard("Present", String.valueOf(presentCount), Color.GREEN));
+        summaryPanel.add(createStatCard("Absent", String.valueOf(absentCount), Color.RED));
+        summaryPanel.add(createStatCard("Late", String.valueOf(lateCount), Color.ORANGE));
+
+        // Detailed table
+        DefaultTableModel reportModel = new DefaultTableModel(
+                new String[]{"Date", "Class", "Student", "Status", "Time"}, 0
+        );
+        JTable reportTable = new JTable(reportModel);
+        styleTable(reportTable);
+
+        for (Attendance att : allAttendance) {
+            reportModel.addRow(new Object[]{
+                att.getDate().toString(),
+                att.getClassId(),
+                getStudentName(att.getStudentId()),
+                att.getStatus(),
+                att.getTimeMarked().toString()
+            });
+        }
+
+        dialog.add(summaryPanel, BorderLayout.NORTH);
+        dialog.add(new JScrollPane(reportTable), BorderLayout.CENTER);
+
+        JButton closeButton = createStyledButton("Close", new Color(108, 117, 125));
+        closeButton.addActionListener(e -> dialog.dispose());
+        dialog.add(closeButton, BorderLayout.SOUTH);
+
+        dialog.setVisible(true);
+    }
+
+    private JPanel createStatCard(String title, String value, Color color) {
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBackground(Color.WHITE);
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(color, 2),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+
+        JLabel titleLabel = new JLabel(title, SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        titleLabel.setForeground(Color.GRAY);
+
+        JLabel valueLabel = new JLabel(value, SwingConstants.CENTER);
+        valueLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        valueLabel.setForeground(color);
+
+        card.add(titleLabel, BorderLayout.NORTH);
+        card.add(valueLabel, BorderLayout.CENTER);
+
+        return card;
+    }
+
+    private String getStudentName(String studentId) {
+        try {
+            List<String> studentLines = function.readStudents();
+            for (String line : studentLines) {
+                String[] parts = line.split(",");
+                if (parts.length >= 2 && parts[0].trim().equals(studentId)) {
+                    return parts[1].trim();
+                }
+            }
+        } catch (Exception e) {
+            // Return student ID if can't find name
+        }
+        return studentId;
+    }
+
+    private void loadAttendanceData() {
+        attendanceTableModel.setRowCount(0);
+        try {
+            List<Attendance> attendanceList = function.getAttendanceForTutor(currentTutor.getStudentId());
+            for (Attendance att : attendanceList) {
+                            attendanceTableModel.addRow(new Object[]{
+                att.getDate().toString(),
+                att.getClassId(),
+                getStudentName(att.getStudentId()),
+                att.getStatus(),
+                att.getTimeMarked().toString()
+            });
+            }
+        } catch (Exception e) {
+            showError("Error", "Failed to load attendance data: " + e.getMessage());
+        }
+    }
+
+    // Messaging System Helper Methods
+    private void loadMessagesData() {
+        messagesTableModel.setRowCount(0);
+        try {
+            List<Message> messages = function.getMessagesForUser(currentTutor.getStudentId());
+            for (Message msg : messages) {
+                String senderName = getUserName(msg.getSenderId());
+                messagesTableModel.addRow(new Object[]{
+                    senderName,
+                    msg.getDateTime().toString(),
+                    msg.getPriority(),
+                    msg.getStatus()
+                });
+            }
+        } catch (Exception e) {
+            showError("Error", "Failed to load messages: " + e.getMessage());
+        }
+    }
+
+    private void loadRecipientsForCompose(JComboBox<String> toComboBox) {
+        toComboBox.removeAllItems();
+        try {
+            List<String> userLines = function.readUsers();
+            for (String line : userLines) {
+                String[] parts = line.split(",");
+                if (parts.length >= 5 && !parts[0].trim().equals(currentTutor.getStudentId())) {
+                    String userId = parts[0].trim();
+                    String name = parts[4].trim();
+                    String role = parts[3].trim();
+                    toComboBox.addItem(userId + " - " + name + " (" + role + ")");
+                }
+            }
+            // Add group options
+            toComboBox.addItem("ALL - All Users");
+            toComboBox.addItem("STUDENTS - All Students");
+            toComboBox.addItem("TUTORS - All Tutors");
+            toComboBox.addItem("RECEPTIONISTS - All Receptionists");
+        } catch (Exception e) {
+            showError("Error", "Failed to load recipients: " + e.getMessage());
+        }
+    }
+
+    private void sendMessage(String to, String subject, String content, String priority) {
+        try {
+            String receiverId = to.split(" - ")[0];
+            
+            Message message = new Message(
+                function.generateMessageId(),
+                currentTutor.getStudentId(),
+                receiverId,
+                "Message",
+                subject,
+                content,
+                java.time.LocalDateTime.now(),
+                "Sent",
+                priority,
+                ""
+            );
+
+            function.addMessage(message.toCsvString());
+            showSuccess("Message sent successfully!");
+            loadMessagesData(); // Refresh messages
+        } catch (Exception e) {
+            showError("Error", "Failed to send message: " + e.getMessage());
+        }
+    }
+
+    private void showMessageDialog(int row) {
+        try {
+            // Get message details from the table
+            String from = (String) messagesTableModel.getValueAt(row, 0);
+            String dateTime = (String) messagesTableModel.getValueAt(row, 1);
+            String priority = (String) messagesTableModel.getValueAt(row, 2);
+
+            // Find the full message content
+            List<Message> messages = function.getMessagesForUser(currentTutor.getStudentId());
+            Message selectedMessage = null;
+            for (Message msg : messages) {
+                if (msg.getDateTime().toString().equals(dateTime)) {
+                    selectedMessage = msg;
+                    break;
+                }
+            }
+
+            if (selectedMessage != null) {
+                // Create message view dialog
+                JDialog dialog = new JDialog(this, "Message Details", true);
+                dialog.setLayout(new BorderLayout(10, 10));
+                dialog.setSize(500, 400);
+                dialog.setLocationRelativeTo(this);
+
+                // Header panel
+                JPanel headerPanel = new JPanel(new GridLayout(3, 2, 5, 5));
+                headerPanel.setBorder(BorderFactory.createTitledBorder("Message Information"));
+                headerPanel.add(new JLabel("From:"));
+                headerPanel.add(new JLabel(from));
+                headerPanel.add(new JLabel("Date/Time:"));
+                headerPanel.add(new JLabel(dateTime));
+                headerPanel.add(new JLabel("Priority:"));
+                headerPanel.add(new JLabel(priority));
+
+                // Content area
+                JTextArea contentArea = new JTextArea(selectedMessage.getContent());
+                contentArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                contentArea.setEditable(false);
+                contentArea.setLineWrap(true);
+                contentArea.setWrapStyleWord(true);
+                JScrollPane contentScrollPane = new JScrollPane(contentArea);
+                contentScrollPane.setBorder(BorderFactory.createTitledBorder("Message Content"));
+
+                // Buttons
+                JPanel buttonPanel = new JPanel(new FlowLayout());
+                JButton replyButton = createStyledButton("↩️ Reply", new Color(0, 123, 255));
+                JButton closeButton = createStyledButton("Close", new Color(108, 117, 125));
+
+                replyButton.addActionListener(e -> {
+                    dialog.dispose();
+                    // Switch to compose tab and pre-fill reply
+                    // This would require access to the compose panel components
+                });
+
+                closeButton.addActionListener(e -> dialog.dispose());
+
+                buttonPanel.add(replyButton);
+                buttonPanel.add(closeButton);
+
+                dialog.add(headerPanel, BorderLayout.NORTH);
+                dialog.add(contentScrollPane, BorderLayout.CENTER);
+                dialog.add(buttonPanel, BorderLayout.SOUTH);
+
+                dialog.setVisible(true);
+
+                // Mark message as read
+                selectedMessage.markAsRead();
+                // Update message status in file (this would require updating the CSV)
+            }
+        } catch (Exception e) {
+            showError("Error", "Failed to display message: " + e.getMessage());
+        }
+    }
+
+    private String getUserName(String userId) {
+        try {
+            List<String> userLines = function.readUsers();
+            for (String line : userLines) {
+                String[] parts = line.split(",");
+                if (parts.length >= 5 && parts[0].trim().equals(userId)) {
+                    return parts[4].trim();
+                }
+            }
+        } catch (Exception e) {
+            // Return user ID if can't find name
+        }
+        return userId;
     }
 
     public static void main(String[] args) {

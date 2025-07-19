@@ -1,0 +1,6 @@
+MSG001,A001,ALL,Announcement,Holiday Notice,The tuition center will be closed on January 26th for Chinese New Year.,2024-01-20 10:00:00,Sent,High,
+MSG002,S001,R001,Request,Subject Change Request,I would like to change from Math Sec 3 to Math Sec 4. Please advise.,2024-01-21 14:30:00,Sent,Medium,
+MSG003,R001,S001,Reply,Re: Subject Change Request,Your request has been approved. Please see the receptionist for schedule details.,2024-01-21 16:45:00,Sent,Medium,MSG002
+MSG004,T001,S001,Message,Assignment Reminder,Please remember to submit your Math homework by Friday.,2024-01-22 11:00:00,Sent,Low,
+MSG005,A001,TUTORS,Announcement,Staff Meeting,Mandatory staff meeting on February 1st at 3 PM in the conference room.,2024-01-23 09:00:00,Sent,High,
+MSG006,S001,T001,Message,Question about homework,Could you please clarify question 5 in today's assignment?,2024-01-23 20:30:00,Sent,Low, 
