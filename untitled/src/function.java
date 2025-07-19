@@ -481,4 +481,195 @@ public class function {
         
         return generateId("REQ", existingIds, 6); // REQ001 format
     }
+
+    // Attendance.txt operations
+    public static List<String> readAttendance() {
+        return readFile("attendance.txt");
+    }
+
+    public static boolean addAttendance(String attendanceData) {
+        return appendToFile("attendance.txt", attendanceData);
+    }
+
+    public static boolean updateAttendance(String oldData, String newData) {
+        List<String> lines = readFile("attendance.txt");
+        int index = lines.indexOf(oldData);
+        if (index != -1) {
+            lines.set(index, newData);
+            return writeFile("attendance.txt", lines);
+        }
+        return false;
+    }
+
+    public static boolean deleteAttendance(String attendanceData) {
+        return deleteLine("attendance.txt", attendanceData);
+    }
+
+    public static String generateAttendanceId() {
+        List<String> attendanceLines = readAttendance();
+        List<String> existingIds = new ArrayList<>();
+        
+        for (String line : attendanceLines) {
+            String[] parts = line.split(",");
+            if (parts.length > 0 && !parts[0].trim().isEmpty()) {
+                existingIds.add(parts[0].trim());
+            }
+        }
+        
+        return generateId("ATT", existingIds, 6); // ATT001 format
+    }
+
+    // Messages.txt operations
+    public static List<String> readMessages() {
+        return readFile("messages.txt");
+    }
+
+    public static boolean addMessage(String messageData) {
+        return appendToFile("messages.txt", messageData);
+    }
+
+    public static boolean updateMessage(String oldData, String newData) {
+        List<String> lines = readFile("messages.txt");
+        int index = lines.indexOf(oldData);
+        if (index != -1) {
+            lines.set(index, newData);
+            return writeFile("messages.txt", lines);
+        }
+        return false;
+    }
+
+    public static boolean deleteMessage(String messageData) {
+        return deleteLine("messages.txt", messageData);
+    }
+
+    public static String generateMessageId() {
+        List<String> messageLines = readMessages();
+        List<String> existingIds = new ArrayList<>();
+        
+        for (String line : messageLines) {
+            String[] parts = line.split(",");
+            if (parts.length > 0 && !parts[0].trim().isEmpty()) {
+                existingIds.add(parts[0].trim());
+            }
+        }
+        
+        return generateId("MSG", existingIds, 6); // MSG001 format
+    }
+
+    // Helper methods for attendance system
+    public static List<Attendance> getAttendanceForStudent(String studentId) {
+        List<Attendance> attendanceList = new ArrayList<>();
+        List<String> lines = readAttendance();
+        
+        for (String line : lines) {
+            if (line.trim().isEmpty()) continue;
+            
+            Attendance attendance = Attendance.fromCsvString(line);
+            if (attendance != null && attendance.getStudentId().equals(studentId)) {
+                attendanceList.add(attendance);
+            }
+        }
+        return attendanceList;
+    }
+
+    public static List<Attendance> getAttendanceForClass(String classId) {
+        List<Attendance> attendanceList = new ArrayList<>();
+        List<String> lines = readAttendance();
+        
+        for (String line : lines) {
+            if (line.trim().isEmpty()) continue;
+            
+            Attendance attendance = Attendance.fromCsvString(line);
+            if (attendance != null && attendance.getClassId().equals(classId)) {
+                attendanceList.add(attendance);
+            }
+        }
+        return attendanceList;
+    }
+
+    public static List<Attendance> getAttendanceForTutor(String tutorId) {
+        List<Attendance> attendanceList = new ArrayList<>();
+        List<String> lines = readAttendance();
+        
+        for (String line : lines) {
+            if (line.trim().isEmpty()) continue;
+            
+            Attendance attendance = Attendance.fromCsvString(line);
+            if (attendance != null && attendance.getMarkedBy().equals(tutorId)) {
+                attendanceList.add(attendance);
+            }
+        }
+        return attendanceList;
+    }
+
+    // Helper methods for messaging system
+    public static List<Message> getMessagesForUser(String userId) {
+        List<Message> messageList = new ArrayList<>();
+        List<String> lines = readMessages();
+        
+        for (String line : lines) {
+            if (line.trim().isEmpty()) continue;
+            
+            Message message = Message.fromCsvString(line);
+            if (message != null) {
+                // Include messages sent to user, broadcast messages, or role-specific messages
+                if (message.getReceiverId().equals(userId) || 
+                    message.getReceiverId().equals("ALL") ||
+                    isUserInGroup(userId, message.getReceiverId())) {
+                    messageList.add(message);
+                }
+            }
+        }
+        return messageList;
+    }
+
+    public static List<Message> getSentMessages(String userId) {
+        List<Message> messageList = new ArrayList<>();
+        List<String> lines = readMessages();
+        
+        for (String line : lines) {
+            if (line.trim().isEmpty()) continue;
+            
+            Message message = Message.fromCsvString(line);
+            if (message != null && message.getSenderId().equals(userId)) {
+                messageList.add(message);
+            }
+        }
+        return messageList;
+    }
+
+    public static List<Message> getAnnouncements() {
+        List<Message> announcements = new ArrayList<>();
+        List<String> lines = readMessages();
+        
+        for (String line : lines) {
+            if (line.trim().isEmpty()) continue;
+            
+            Message message = Message.fromCsvString(line);
+            if (message != null && message.isAnnouncement()) {
+                announcements.add(message);
+            }
+        }
+        return announcements;
+    }
+
+    private static boolean isUserInGroup(String userId, String groupId) {
+        if (groupId.equals("ALL")) return true;
+        
+        // Get user role from users.txt
+        List<String> userLines = readUsers();
+        for (String line : userLines) {
+            String[] parts = line.split(",");
+            if (parts.length >= 4 && parts[0].trim().equals(userId)) {
+                String role = parts[3].trim().toLowerCase();
+                switch (groupId) {
+                    case "TUTORS": return "tutor".equals(role);
+                    case "STUDENTS": return "student".equals(role);
+                    case "RECEPTIONISTS": return "receptionist".equals(role);
+                    case "ADMINS": return "admin".equals(role);
+                }
+            }
+        }
+        return false;
+    }
 }

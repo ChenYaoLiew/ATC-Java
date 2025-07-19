@@ -52,6 +52,10 @@ public class receptionist_dashboard extends JFrame {
     private JButton declineRequestButton;
     private DefaultTableModel requestsTableModel;
     
+    // Messaging Tab Components
+    private JTable receptionistMessagesTable;
+    private DefaultTableModel receptionistMessagesTableModel;
+    
     private String currentUser;
     private Map<String, String> subjectMap = new HashMap<>();
     private Map<String, String> levelSubjectMap = new HashMap<>();
@@ -79,6 +83,9 @@ public class receptionist_dashboard extends JFrame {
         
         loadProfile();
         updateNextPaymentNumber();
+        
+        // Add messaging tab programmatically
+        addMessagingTab();
     }
     
     private void applyModernStyling() {
@@ -1100,6 +1107,328 @@ public class receptionist_dashboard extends JFrame {
             dispose();
             new main_page().setVisible(true);
         }
+    }
+
+    // ==================== Messaging System Methods ====================
+    
+    private void addMessagingTab() {
+        if (tabbedPane != null) {
+            JPanel messagingPanel = createReceptionistMessagingPanel();
+            tabbedPane.addTab("💬 Messages", messagingPanel);
+        }
+    }
+    
+    private JPanel createReceptionistMessagingPanel() {
+        JPanel panel = new JPanel(new BorderLayout(15, 15));
+        panel.setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
+        panel.setBackground(new Color(0xF8F9FA));
+
+        JLabel messagingTitle = new JLabel("💬 Messages & Communication");
+        messagingTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        messagingTitle.setForeground(new Color(0x343A40));
+
+        // Create tabbed pane for Inbox and Compose
+        JTabbedPane messagesTabbedPane = new JTabbedPane();
+        messagesTabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 12));
+
+        // Inbox Tab
+        JPanel inboxPanel = new JPanel(new BorderLayout(10, 10));
+        inboxPanel.setBackground(new Color(0xF8F9FA));
+
+        receptionistMessagesTableModel = new DefaultTableModel(
+                new String[]{"From", "Date/Time", "Priority", "Status"}, 0
+        ) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        receptionistMessagesTable = new JTable(receptionistMessagesTableModel);
+        styleTable(receptionistMessagesTable);
+        receptionistMessagesTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    int row = receptionistMessagesTable.getSelectedRow();
+                    if (row >= 0) {
+                        showReceptionistMessageDialog(row);
+                    }
+                }
+            }
+        });
+
+        JScrollPane messagesScrollPane = new JScrollPane(receptionistMessagesTable);
+        inboxPanel.add(messagesScrollPane, BorderLayout.CENTER);
+
+        // Buttons for inbox
+        JPanel inboxButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        inboxButtonPanel.setBackground(new Color(0xF8F9FA));
+        JButton refreshMessagesButton = new JButton("🔄 Refresh");
+        styleButton(refreshMessagesButton, new Color(108, 117, 125));
+        refreshMessagesButton.addActionListener(e -> loadReceptionistMessagesData());
+        inboxButtonPanel.add(refreshMessagesButton);
+
+        inboxPanel.add(inboxButtonPanel, BorderLayout.SOUTH);
+
+        // Compose Tab
+        JPanel composePanel = createReceptionistComposeMessagePanel();
+
+        messagesTabbedPane.addTab("📥 Inbox", inboxPanel);
+        messagesTabbedPane.addTab("✉️ Compose", composePanel);
+
+        panel.add(messagingTitle, BorderLayout.NORTH);
+        panel.add(messagesTabbedPane, BorderLayout.CENTER);
+
+        // Load initial messages data
+        loadReceptionistMessagesData();
+
+        return panel;
+    }
+
+    private JPanel createReceptionistComposeMessagePanel() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(new Color(0xF8F9FA));
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.anchor = GridBagConstraints.WEST;
+
+        // To field
+        gbc.gridx = 0; gbc.gridy = 0;
+        JLabel toLabel = new JLabel("To:");
+        toLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        panel.add(toLabel, gbc);
+        JComboBox<String> toComboBox = new JComboBox<>();
+        loadRecipientsForReceptionist(toComboBox);
+        toComboBox.setPreferredSize(new Dimension(300, 35));
+        gbc.gridx = 1;
+        panel.add(toComboBox, gbc);
+
+        // Priority field
+        gbc.gridx = 0; gbc.gridy = 1;
+        JLabel priorityLabel = new JLabel("Priority:");
+        priorityLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        panel.add(priorityLabel, gbc);
+        JComboBox<String> priorityComboBox = new JComboBox<>(new String[]{"Low", "Medium", "High"});
+        priorityComboBox.setPreferredSize(new Dimension(300, 35));
+        priorityComboBox.setSelectedItem("Medium");
+        gbc.gridx = 1;
+        panel.add(priorityComboBox, gbc);
+
+        // Message content area
+        gbc.gridx = 0; gbc.gridy = 2;
+        gbc.anchor = GridBagConstraints.NORTHWEST;
+        JLabel messageLabel = new JLabel("Message:");
+        messageLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        panel.add(messageLabel, gbc);
+        JTextArea messageArea = new JTextArea(10, 25);
+        messageArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        messageArea.setLineWrap(true);
+        messageArea.setWrapStyleWord(true);
+        styleTextArea(messageArea);
+        JScrollPane messageScrollPane = new JScrollPane(messageArea);
+        messageScrollPane.setPreferredSize(new Dimension(300, 200));
+        gbc.gridx = 1;
+        gbc.fill = GridBagConstraints.BOTH;
+        panel.add(messageScrollPane, gbc);
+
+        // Send button
+        gbc.gridx = 1; gbc.gridy = 3;
+        gbc.anchor = GridBagConstraints.EAST;
+        gbc.fill = GridBagConstraints.NONE;
+        JButton sendButton = new JButton("📤 Send Message");
+        styleButton(sendButton, new Color(40, 167, 69));
+        sendButton.addActionListener(e -> {
+            String to = (String) toComboBox.getSelectedItem();
+            String priority = (String) priorityComboBox.getSelectedItem();
+            String content = messageArea.getText().trim();
+
+            if (to == null || content.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Please fill in all required fields", 
+                                            "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            sendReceptionistMessage(to, "Message", content, priority);
+            messageArea.setText("");
+            toComboBox.setSelectedIndex(0);
+            priorityComboBox.setSelectedItem("Medium");
+        });
+        panel.add(sendButton, gbc);
+
+        return panel;
+    }
+
+    // Helper methods for receptionist messaging
+    private void loadReceptionistMessagesData() {
+        receptionistMessagesTableModel.setRowCount(0);
+        try {
+            String receptionistId = getReceptionistUserId();
+            List<Message> messages = function.getMessagesForUser(receptionistId);
+            for (Message msg : messages) {
+                String senderName = getUserNameFromId(msg.getSenderId());
+                receptionistMessagesTableModel.addRow(new Object[]{
+                    senderName,
+                    msg.getDateTime().toString(),
+                    msg.getPriority(),
+                    msg.getStatus()
+                });
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Failed to load messages: " + e.getMessage(), 
+                                        "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void loadRecipientsForReceptionist(JComboBox<String> toComboBox) {
+        toComboBox.removeAllItems();
+        try {
+            List<String> userLines = function.readUsers();
+            String receptionistId = getReceptionistUserId();
+            for (String line : userLines) {
+                String[] parts = line.split(",");
+                if (parts.length >= 5 && !parts[0].trim().equals(receptionistId)) {
+                    String userId = parts[0].trim();
+                    String name = parts[4].trim();
+                    String role = parts[3].trim();
+                    toComboBox.addItem(userId + " - " + name + " (" + role + ")");
+                }
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Failed to load recipients: " + e.getMessage(), 
+                                        "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private String getReceptionistUserId() {
+        try {
+            List<String> userLines = function.readUsers();
+            for (String line : userLines) {
+                String[] parts = line.split(",");
+                if (parts.length >= 5 && "receptionist".equals(parts[3].trim()) && 
+                    parts[1].trim().equals(currentUser)) {
+                    return parts[0].trim();
+                }
+            }
+        } catch (Exception e) {
+            // Return default if can't find
+        }
+        return "R001"; // Default receptionist ID
+    }
+
+    private String getUserNameFromId(String userId) {
+        try {
+            List<String> userLines = function.readUsers();
+            for (String line : userLines) {
+                String[] parts = line.split(",");
+                if (parts.length >= 5 && parts[0].trim().equals(userId)) {
+                    return parts[4].trim();
+                }
+            }
+        } catch (Exception e) {
+            // Return user ID if can't find name
+        }
+        return userId;
+    }
+
+    private void sendReceptionistMessage(String to, String subject, String content, String priority) {
+        try {
+            String receiverId = to.split(" - ")[0];
+            String receptionistId = getReceptionistUserId();
+            
+            Message message = new Message(
+                function.generateMessageId(),
+                receptionistId,
+                receiverId,
+                "Message",
+                subject,
+                content,
+                java.time.LocalDateTime.now(),
+                "Sent",
+                priority,
+                ""
+            );
+
+            function.addMessage(message.toCsvString());
+            JOptionPane.showMessageDialog(this, "Message sent successfully!", 
+                                        "Success", JOptionPane.INFORMATION_MESSAGE);
+            loadReceptionistMessagesData(); // Refresh messages
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Failed to send message: " + e.getMessage(), 
+                                        "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void showReceptionistMessageDialog(int row) {
+        try {
+            String from = (String) receptionistMessagesTableModel.getValueAt(row, 0);
+            String dateTime = (String) receptionistMessagesTableModel.getValueAt(row, 1);
+            String priority = (String) receptionistMessagesTableModel.getValueAt(row, 2);
+
+            String receptionistId = getReceptionistUserId();
+            List<Message> messages = function.getMessagesForUser(receptionistId);
+            Message selectedMessage = null;
+            for (Message msg : messages) {
+                if (msg.getDateTime().toString().equals(dateTime)) {
+                    selectedMessage = msg;
+                    break;
+                }
+            }
+
+            if (selectedMessage != null) {
+                JDialog dialog = new JDialog(this, "Message Details", true);
+                dialog.setLayout(new BorderLayout(10, 10));
+                dialog.setSize(500, 400);
+                dialog.setLocationRelativeTo(this);
+
+                // Header panel
+                JPanel headerPanel = new JPanel(new GridLayout(3, 2, 5, 5));
+                headerPanel.setBorder(BorderFactory.createTitledBorder("Message Information"));
+                headerPanel.add(new JLabel("From:"));
+                headerPanel.add(new JLabel(from));
+                headerPanel.add(new JLabel("Date/Time:"));
+                headerPanel.add(new JLabel(dateTime));
+                headerPanel.add(new JLabel("Priority:"));
+                headerPanel.add(new JLabel(priority));
+
+                // Content area
+                JTextArea contentArea = new JTextArea(selectedMessage.getContent());
+                contentArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                contentArea.setEditable(false);
+                contentArea.setLineWrap(true);
+                contentArea.setWrapStyleWord(true);
+                JScrollPane contentScrollPane = new JScrollPane(contentArea);
+                contentScrollPane.setBorder(BorderFactory.createTitledBorder("Message Content"));
+
+                // Close button
+                JButton closeButton = new JButton("Close");
+                styleButton(closeButton, new Color(108, 117, 125));
+                closeButton.addActionListener(e -> dialog.dispose());
+
+                dialog.add(headerPanel, BorderLayout.NORTH);
+                dialog.add(contentScrollPane, BorderLayout.CENTER);
+                dialog.add(closeButton, BorderLayout.SOUTH);
+
+                dialog.setVisible(true);
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Failed to display message: " + e.getMessage(), 
+                                        "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // Style method for tables (if not already existing)
+    private void styleTable(JTable table) {
+        table.setRowHeight(35);
+        table.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        table.getTableHeader().setBackground(new Color(0x007BFF));
+        table.getTableHeader().setForeground(Color.WHITE);
+        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
+        table.setShowGrid(true);
+        table.setGridColor(new Color(0xDEE2E6));
+        table.setSelectionBackground(new Color(0xE7F3FF));
+        table.setBackground(Color.WHITE);
     }
     
     // For testing purposes
