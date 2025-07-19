@@ -59,6 +59,7 @@ public class receptionist_dashboard extends JFrame {
     private String currentUser;
     private Map<String, String> subjectMap = new HashMap<>();
     private Map<String, String> levelSubjectMap = new HashMap<>();
+    private Map<String, String> classToSubjectMap = new HashMap<>();
     private Random random = new Random();
     
     public receptionist_dashboard(String userName) {
@@ -293,7 +294,9 @@ public class receptionist_dashboard extends JFrame {
     private void loadSubjects() {
         subjectMap.clear();
         levelSubjectMap.clear();
+        classToSubjectMap.clear();
         
+        // Load subjects
         List<String> subjectLines = function.readSubjects();
         
         for (String line : subjectLines) {
@@ -306,6 +309,20 @@ public class receptionist_dashboard extends JFrame {
                 
                 subjectMap.put(subjectId, subjectName);
                 levelSubjectMap.put(subjectId, level);
+            }
+        }
+        
+        // Load class-to-subject mapping
+        List<String> classLines = function.readClasses();
+        
+        for (String line : classLines) {
+            String[] parts = line.split(",");
+            
+            if (parts.length >= 2) {
+                String classId = parts[0].trim();
+                String subjectId = parts[1].trim();
+                
+                classToSubjectMap.put(classId, subjectId);
             }
         }
     }
@@ -916,8 +933,18 @@ public class receptionist_dashboard extends JFrame {
         return "Unknown";
     }
     
-    private String getSubjectName(String subjectId) {
-        return subjectMap.getOrDefault(subjectId, subjectId);
+    private String getSubjectName(String classOrSubjectId) {
+        // Check if it's a class ID (starts with "CLS")
+        if (classOrSubjectId.startsWith("CLS")) {
+            // Convert class ID to subject ID
+            String subjectId = classToSubjectMap.get(classOrSubjectId);
+            if (subjectId != null) {
+                return subjectMap.getOrDefault(subjectId, classOrSubjectId);
+            }
+        }
+        
+        // If it's already a subject ID or no mapping found, use it directly
+        return subjectMap.getOrDefault(classOrSubjectId, classOrSubjectId);
     }
     
     private String[] getRequestData(String requestId) {
