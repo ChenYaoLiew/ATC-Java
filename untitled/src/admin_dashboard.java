@@ -544,40 +544,32 @@ public class admin_dashboard extends JFrame {
     // Method to view monthly income report
     public String viewMonthlyIncomeReport(String month, int year) {
         double totalIncome = 0;
-        Map<String, Double> incomeBySubject = new HashMap<>();
-        Map<String, Double> incomeByLevel = new HashMap<>();
-
-        // Read payments from file
         List<String> paymentLines = function.readPayments();
         payments.clear();
 
+        // Prepare details for the report
+        List<String> paymentDetails = new ArrayList<>();
+        String billingMonth = String.format("%04d-%02d", year, getMonthNumber(month));
+
         for (String line : paymentLines) {
             String[] parts = line.split(",");
-            if (parts.length >= 7) {
-                String studentUsername = parts[0].trim();
-                String subject = parts[1].trim();
-                String level = parts[2].trim();
-                double amount = Double.parseDouble(parts[3].trim());
-                String paymentMonth = parts[5].trim();
-                String receiptNumber = parts[6].trim();
+            if (parts.length >= 9) {
+                // payments.txt: PaymentID,StudentID,Field3,Amount,PaymentMethod,DateTime,BillingMonth,ReceptionistID,Status
+                String studentId = parts[1].trim();
+                String amountStr = parts[3].trim();
+                String paymentMethod = parts[4].trim();
+                String dateTime = parts[5].trim();
+                String payMonth = parts[6].trim();
+                String status = parts[8].trim();
 
-                Payment payment = new Payment(studentUsername, subject, level, amount,
-                                           LocalDate.now(), paymentMonth, receiptNumber);
-                payments.add(payment);
-            }
-        }
-
-        for (Payment payment : payments) {
-            if (payment.getMonth().equals(month + " " + year)) {
-                totalIncome += payment.getAmount();
-
-                // Aggregate by subject
-                String subject = payment.getSubject();
-                incomeBySubject.put(subject, incomeBySubject.getOrDefault(subject, 0.0) + payment.getAmount());
-
-                // Aggregate by level
-                String level = payment.getLevel();
-                incomeByLevel.put(level, incomeByLevel.getOrDefault(level, 0.0) + payment.getAmount());
+                if (payMonth.equals(billingMonth)) {
+                    double amount = 0;
+                    try { amount = Double.parseDouble(amountStr); } catch (Exception e) { continue; }
+                    totalIncome += amount;
+                    String studentName = getStudentNameById(studentId);
+                    paymentDetails.add(String.format("Student: %s | Date: %s | Amount: $%.2f | Method: %s | Status: %s",
+                            studentName, dateTime, amount, paymentMethod, status));
+                }
             }
         }
 
@@ -585,20 +577,37 @@ public class admin_dashboard extends JFrame {
         StringBuilder report = new StringBuilder();
         report.append("===== MONTHLY INCOME REPORT =====\n");
         report.append("Month: ").append(month).append(" ").append(year).append("\n");
-        report.append("Total Income: $").append(totalIncome).append("\n\n");
+        report.append("Total Income: $").append(String.format("%.2f", totalIncome)).append("\n\n");
 
-        report.append("--- Income by Subject ---\n");
-        for (Map.Entry<String, Double> entry : incomeBySubject.entrySet()) {
-            report.append(entry.getKey()).append(": $").append(entry.getValue()).append("\n");
-        }
-
-        report.append("\n--- Income by Level ---\n");
-        for (Map.Entry<String, Double> entry : incomeByLevel.entrySet()) {
-            report.append(entry.getKey()).append(": $").append(entry.getValue()).append("\n");
+        report.append("--- Payment Details ---\n");
+        if (paymentDetails.isEmpty()) {
+            report.append("No payments found for this month.\n");
+        } else {
+            for (String detail : paymentDetails) {
+                report.append(detail).append("\n");
+            }
         }
         report.append("================================");
-
         return report.toString();
+    }
+
+    // Helper to convert month name to number (e.g., "March" -> 3)
+    private int getMonthNumber(String monthName) {
+        switch (monthName.toLowerCase()) {
+            case "january": return 1;
+            case "february": return 2;
+            case "march": return 3;
+            case "april": return 4;
+            case "may": return 5;
+            case "june": return 6;
+            case "july": return 7;
+            case "august": return 8;
+            case "september": return 9;
+            case "october": return 10;
+            case "november": return 11;
+            case "december": return 12;
+            default: return 1;
+        }
     }
 
     // Method to display all tutors
