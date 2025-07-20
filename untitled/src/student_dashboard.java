@@ -1822,7 +1822,7 @@ public class student_dashboard extends JFrame {
         inboxPanel.setBackground(new Color(0xF8F9FA));
 
         studentMessagesTableModel = new DefaultTableModel(
-                new String[]{"From", "Date/Time", "Priority", "Status"}, 0
+                new String[]{"From", "Date", "Time", "Priority", "Status"}, 0
         ) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -1849,10 +1849,6 @@ public class student_dashboard extends JFrame {
         // Buttons for inbox
         JPanel inboxButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         inboxButtonPanel.setBackground(new Color(0xF8F9FA));
-        JButton refreshMessagesButton = new JButton("🔄 Refresh");
-        styleButton(refreshMessagesButton, new Color(108, 117, 125));
-        refreshMessagesButton.addActionListener(e -> loadStudentMessagesData());
-        inboxButtonPanel.add(refreshMessagesButton);
 
         inboxPanel.add(inboxButtonPanel, BorderLayout.SOUTH);
 
@@ -2009,9 +2005,13 @@ public class student_dashboard extends JFrame {
             List<Message> messages = function.getMessagesForUser(currentStudentId);
             for (Message msg : messages) {
                 String senderName = getUserNameFromId(msg.getSenderId());
+                String fullDateTime = msg.getDateTime().toString();
+                String date = fullDateTime.contains("T") ? fullDateTime.split("T")[0] : fullDateTime.split(" ")[0];
+                String time = fullDateTime.contains("T") ? fullDateTime.split("T")[1] : (fullDateTime.split(" ").length > 1 ? fullDateTime.split(" ")[1] : "");
                 studentMessagesTableModel.addRow(new Object[]{
                     senderName,
-                    msg.getDateTime().toString(),
+                    date,
+                    time,
                     msg.getPriority(),
                     msg.getStatus()
                 });
@@ -2354,13 +2354,15 @@ public class student_dashboard extends JFrame {
         // Similar to tutor's showMessageDialog but adapted for students
         try {
             String from = (String) studentMessagesTableModel.getValueAt(row, 0);
-            String dateTime = (String) studentMessagesTableModel.getValueAt(row, 1);
-            String priority = (String) studentMessagesTableModel.getValueAt(row, 2);
+            String date = (String) studentMessagesTableModel.getValueAt(row, 1);
+            String time = (String) studentMessagesTableModel.getValueAt(row, 2);
+            String priority = (String) studentMessagesTableModel.getValueAt(row, 3);
+            String reconstructedDateTime = date + (time.isEmpty() ? "" : "T" + time);
 
             List<Message> messages = function.getMessagesForUser(currentStudentId);
             Message selectedMessage = null;
             for (Message msg : messages) {
-                if (msg.getDateTime().toString().equals(dateTime)) {
+                if (msg.getDateTime().toString().equals(reconstructedDateTime)) {
                     selectedMessage = msg;
                     break;
                 }
@@ -2378,7 +2380,7 @@ public class student_dashboard extends JFrame {
                 headerPanel.add(new JLabel("From:"));
                 headerPanel.add(new JLabel(from));
                 headerPanel.add(new JLabel("Date/Time:"));
-                headerPanel.add(new JLabel(dateTime));
+                headerPanel.add(new JLabel(reconstructedDateTime));
                 headerPanel.add(new JLabel("Priority:"));
                 headerPanel.add(new JLabel(priority));
 
